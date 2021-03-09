@@ -5,8 +5,7 @@ use crate::resources::errors::ResourceError::*;
 use crate::resources::errors::ResourceError;
 use std::path::{PathBuf, Path};
 use std::ffi::CString;
-use std::{fs, ffi};
-use std::fs::File;
+use std::{fs};
 use std::io::Read;
 
 pub mod errors;

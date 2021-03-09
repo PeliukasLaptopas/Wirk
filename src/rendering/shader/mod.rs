@@ -1,13 +1,13 @@
 pub mod program;
-pub mod errors;
 pub mod shader_utils;
 
-use crate::shader::shader_utils::create_whitespace_cstring_with_len;
-use crate::shader::errors::ShaderError;
+use crate::rendering::errors::ShaderError;
 use crate::resources::Resources;
 use std::ffi::{CStr};
 use gl::types::*;
 use gl::*;
+use crate::rendering::errors::ShaderError::{CanNotDetermineShaderTypeForResource, ErrorLoadingShaderFromResource, CompileError};
+use crate::rendering::shader::shader_utils::create_whitespace_cstring_with_len;
 
 pub struct Shader {
     gl: gl::Gl,
@@ -19,7 +19,7 @@ impl Shader {
         gl: &gl::Gl,
         source: &CStr, // modified
         kind: GLenum
-    ) -> Result<Shader, ShaderError> {
+    ) -> Result<Shader, String> {
         let id = unsafe { gl.CreateShader(kind) };
 
         unsafe {
@@ -40,7 +40,7 @@ impl Shader {
 
             let error = create_whitespace_cstring_with_len(len as usize);
 
-            return Err(ShaderError(error.to_string_lossy().into_owned()));
+            return Err(error.to_string_lossy().into_owned());
         }
 
         Ok(Shader { gl: gl.clone(), id })
@@ -58,15 +58,15 @@ impl Shader {
                 name.ends_with(file_extension)
             })
             .map(|&(_, kind)| kind)
-            .ok_or_else(|| ShaderError(format!("Can not determine shader type for resource {}", name)))?;
+            .ok_or_else(|| CanNotDetermineShaderTypeForResource { name: name.to_string() })?;
 
         let source = res.load_cstring(name)
-            .map_err(|e| ShaderError(format!("Error loading resource {}: {:?}", name, e)))?;
+            .map_err(|e| ErrorLoadingShaderFromResource { name: name.to_string(), inner: e })?;
 
-        Shader::shader_from_source(gl, &source, shader_kind)
+        Shader::shader_from_source(gl, &source, shader_kind).map_err(|message| CompileError { name: name.into(), message, })
     }
 
-    pub fn create_vertex_shader(gl: &gl::Gl, source: &CStr) -> Result<Shader, ShaderError> {
+    pub fn create_vertex_shader(gl: &gl::Gl, source: &CStr) -> Result<Shader, String> {
         Shader::shader_from_source(
             gl,
             source,
@@ -74,7 +74,7 @@ impl Shader {
         )
     }
 
-    pub fn create_fragment_shader(gl: &gl::Gl, source: &CStr) -> Result<Shader, ShaderError> {
+    pub fn create_fragment_shader(gl: &gl::Gl, source: &CStr) -> Result<Shader, String> {
         Shader::shader_from_source(
             gl,
             source,

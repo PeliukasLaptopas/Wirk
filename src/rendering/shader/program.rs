@@ -1,7 +1,8 @@
-use crate::shader::{Shader};
-use crate::shader::shader_utils::create_whitespace_cstring_with_len;
 use crate::resources::Resources;
-use crate::shader::errors::ShaderError;
+use crate::rendering::errors::ShaderError;
+use crate::rendering::errors::ShaderError::LinkError;
+use crate::rendering::shader::Shader;
+use crate::rendering::shader::shader_utils::create_whitespace_cstring_with_len;
 
 pub struct Program {
     gl: gl::Gl,
@@ -51,7 +52,7 @@ impl Program {
         Ok(Program { gl: gl.clone(), id: program_id })
     }
 
-    pub fn from_shaders(gl: &gl::Gl, shaders: &[Shader]) -> Result<Program, ShaderError> {
+    pub fn from_shaders(gl: &gl::Gl, shaders: &[Shader]) -> Result<Program, String> {
         let program_id = unsafe { gl.CreateProgram() };
 
         for shader in shaders {
@@ -86,7 +87,7 @@ impl Program {
                 );
             }
 
-            return Err(ShaderError(error.to_string_lossy().into_owned()));
+            return Err(error.to_string_lossy().into_owned());
         }
 
         for shader in shaders {
@@ -101,7 +102,7 @@ impl Program {
         })
     }
 
-    pub fn from_res(gl: &gl::Gl, res: &Resources, name: &str) -> Result<Program, ShaderError> { //todo program errors to be ProgramError
+    pub fn from_res(gl: &gl::Gl, res: &Resources, name: &str) -> Result<Program, ShaderError> {
         const POSSIBLE_EXT: [&str; 2] = [
             ".vert",
             ".frag",
@@ -113,7 +114,7 @@ impl Program {
             })
             .collect::<Result<Vec<Shader>, ShaderError>>()?;
 
-        Program::from_shaders(gl, &shaders[..])
+        Program::from_shaders(gl, &shaders[..]).map_err(|message| LinkError { name: name.into(), message, })
     }
 
     pub fn use_this(&self) {

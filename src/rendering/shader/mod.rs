@@ -1,3 +1,6 @@
+pub mod color_buffer;
+pub mod viewport;
+pub mod buffer;
 pub mod program;
 pub mod shader_utils;
 
@@ -8,6 +11,7 @@ use gl::types::*;
 use gl::*;
 use crate::rendering::errors::ShaderError::{CanNotDetermineShaderTypeForResource, ErrorLoadingShaderFromResource, CompileError};
 use crate::rendering::shader::shader_utils::create_whitespace_cstring_with_len;
+use self::viewport::Viewport; //todo use this self:: else where
 
 pub struct Shader {
     gl: gl::Gl,

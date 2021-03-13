@@ -15,6 +15,8 @@ sdl2 = "0.31.0"
 failure = "0.1"
 gl = { path = "gl/" }
 gl_derive = { path = "gl_derive" }
+vec-2-10-10-10 = "0.1.2"
+nalgebra = "0.16"
 
 [features]
 gl_debug = ["gl/debug"]

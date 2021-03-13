@@ -117,7 +117,7 @@ impl Program {
         Program::from_shaders(gl, &shaders[..]).map_err(|message| LinkError { name: name.into(), message, })
     }
 
-    pub fn use_this(&self) {
+    pub fn use_program(&self) {
         unsafe {
             self.gl.UseProgram(self.id);
         }

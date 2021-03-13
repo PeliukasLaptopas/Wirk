@@ -7,14 +7,22 @@ pub mod rendering;
 
 extern crate sdl2;
 extern crate gl;
+extern crate vec_2_10_10_10;
+extern crate nalgebra;
 
+use nalgebra as na;
 use std::rc::Rc;
 use std::path::Path;
 use crate::resources::Resources;
 use failure::err_msg;
 use crate::rendering::shader::program::Program;
-use crate::rendering::vertex;
+use crate::rendering::{vertex, triangle};
 use crate::rendering::vertex::Vertex;
+use crate::rendering::shader::buffer;
+use crate::rendering::shader::buffer::{Buffer, BufferTypeArray, VertexArray};
+use crate::rendering::shader::viewport::Viewport;
+use crate::rendering::shader::color_buffer::ColorBuffer;
+use na::*;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -45,61 +53,64 @@ pub fn open_window() -> Result<(), failure::Error> {
     let shader_program = Program::from_res(&gl, &res, "shaders/triangle").unwrap();
 
     let vertices: Vec<Vertex> = vec![
-        Vertex { pos: (0.5, -0.5, 0.0).into(),  color: (1.0, 0.0, 0.0).into() }, // bottom right
-        Vertex { pos: (-0.5, -0.5, 0.0).into(), color: (0.0, 1.0, 0.0).into() }, // bottom left
-        Vertex { pos: (0.0,  0.5, 0.0).into(),  color: (0.0, 0.0, 1.0).into() }  // top
+        Vertex {
+            pos: (0.5, -0.5, 0.0).into(),
+            color: (1.0, 0.0, 0.0, 1.0).into()
+        },
+        Vertex {
+            pos: (-0.5, -0.5, 0.0).into(),
+            color: (0.0, 1.0, 0.0, 1.0).into()
+        },
+        Vertex {
+            pos: (0.0,  0.5, 0.0).into(),
+            color: (0.0, 0.0, 1.0, 1.0).into()
+        }
     ];
 
-    let mut vbo: gl::types::GLuint = 0;
-    let mut vao: gl::types::GLuint = 0;
+    // set up vertex buffer object
+    let vbo: Buffer<BufferTypeArray> = buffer::ArrayBuffer::new(&gl);
+    vbo.bind();
+    vbo.static_draw_data(&vertices);
+    vbo.unbind();
 
-    unsafe {
-        gl.GenBuffers(1, &mut vbo);
-        gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl.BufferData(
-            gl::ARRAY_BUFFER, // target
-            (vertices.len() * std::mem::size_of::<Vertex>()) as gl::types::GLsizeiptr, // size of data in bytes
-            vertices.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW, // usage
-        );
+    // set up vertex array object
+    let vao: VertexArray = buffer::VertexArray::new(&gl);
+    vao.bind();
+    vbo.bind();
+    Vertex::vertex_attrib_pointers(&gl);
+    vbo.unbind();
+    vao.unbind();
 
-        gl.GenVertexArrays(1, &mut vao);
-        gl.BindVertexArray(vao);
-        gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
+    let mut viewport = Viewport::for_window(900, 700);
 
-        Vertex::vertex_attrib_pointers(&gl);
+    let color_buffer = ColorBuffer::from_color(Vector3::new(0.3, 0.3, 0.5));
 
-        gl.BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl.BindVertexArray(0);
-    }
+    let triangle = triangle::Triangle::new(&Vector2::new(-1.0, -1.0), &Vector2::new(1.0, 1.0), &res, &gl)?;
 
-    let mut event_pump = sdl.event_pump().unwrap();
+    viewport.use_viewport(&gl);
+    color_buffer.clear_color(&gl);
+
+    // main loop
+    let mut event_pump = sdl.event_pump().map_err(err_msg)?;
     'main: loop {
         for event in event_pump.poll_iter() {
             match event {
-                sdl2::event::Event::Quit {..} => break 'main,
-                _ => {},
+                sdl2::event::Event::Quit { .. } => break 'main,
+                sdl2::event::Event::Window {
+                    win_event: sdl2::event::WindowEvent::Resized(w, h),
+                    ..
+                } => {
+                    viewport.update_size(w, h);
+                    viewport.use_viewport(&gl);
+                }
+                _ => {}
             }
         }
 
-        unsafe {
-            gl.Viewport(0, 0, 900, 700); // set viewport
-            gl.Clear(gl::COLOR_BUFFER_BIT);
-        }
-
-        shader_program.use_this();
-
-        unsafe {
-            gl.BindVertexArray(vao);
-            gl.DrawArrays(
-                gl::TRIANGLES, // mode
-                0, // starting index in the enabled arrays
-                3 // number of indices to be rendered
-            );
-        }
+        color_buffer.clear(&gl);
+        triangle.render(&gl);
 
         window.gl_swap_window();
-        // render window contents here
     }
 
     Ok(())

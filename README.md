@@ -4,3 +4,8 @@ This is a project that uses my engine
 ![image](https://user-images.githubusercontent.com/38985678/111040399-7a04bd80-843b-11eb-9734-81dddbca835a.png)
 
 ![image](https://user-images.githubusercontent.com/38985678/111040417-8b4dca00-843b-11eb-895e-96c86b3a62dc.png)
+
+Supports
+Vsync
+fps calculator
+fps limiter

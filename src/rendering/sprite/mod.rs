@@ -8,16 +8,23 @@ use nalgebra::*;
 use std::ffi::CString;
 use image::io::Reader as ImageReader;
 use image::DynamicImage::*;
+use gl::types::GLuint;
 
 pub struct Sprite {
     pub program: Program,
     _vbo: buffer::ArrayBuffer, // _ to disable warning about not used vbo
     vao: buffer::VertexArray,
-    texture_id: gl::types::GLuint,
+    texture_id: GLuint,
 }
 
 impl Sprite {
-    pub fn new(pos: &Vector2<f32>, scale: &Vector2<f32>, res: &Resources, gl: &gl::Gl) -> Result<Sprite, failure::Error> {
+    pub fn new(
+        pos: &Vector2<f32>,
+        scale: &Vector2<f32>,
+        texture_name: &'static str,
+        res: &mut Resources<'static>,
+        gl: &gl::Gl
+    ) -> Result<Sprite, failure::Error> {
 
         // set up shader program
         let program = Program::from_res(gl, res, "shaders/triangle")?;
@@ -59,30 +66,6 @@ impl Sprite {
             }
         ];
 
-        /*let img = ImageReader::open(res.root_path.join("water.png").into_os_string().into_string().unwrap())?.decode()?; //ImageRgba8
-
-        let mut bytes: Vec<u8> = Vec::new();
-        img.write_to(&mut bytes, image::ImageOutputFormat::Png)?;
-
-        let mut texture_id: gl::types::GLuint = 0;
-        unsafe {
-            gl.GenTextures(1, &mut texture_id);
-            gl.BindTexture(gl::TEXTURE_2D, texture_id);
-            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, 64, 64, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as i32);
-
-            gl.GenerateMipmap(gl::TEXTURE_2D);
-
-            gl.BindTexture(gl::TEXTURE_2D, 0);
-        }*/
-
-        //todo should be in main
-        let mut textureCache = TextureCache::new();
-        let texture = textureCache.get_texture("water.png", res, gl)?;
-
 
         let vbo = buffer::ArrayBuffer::new(gl);
         vbo.bind();
@@ -99,11 +82,14 @@ impl Sprite {
         vbo.unbind();
         vao.unbind();
 
+
+        let texture_id = res.get_texture(texture_name, gl)?; //todo should get width and height from this function and store that here in sprite
+
         Ok(Sprite {
             program,
             _vbo: vbo,
             vao,
-            texture_id: texture //todo fix
+            texture_id
         })
     }
 

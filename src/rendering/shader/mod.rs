@@ -60,7 +60,7 @@ impl Shader {
     }
 
 
-    pub fn from_res(gl: &gl::Gl, res: &Resources, name: &str) -> Result<Shader, ShaderError> {
+    pub fn from_res(gl: &gl::Gl, res: &Resources<'static>, name: &str) -> Result<Shader, ShaderError> {
         const POSSIBLE_EXT: [(&str, gl::types::GLenum); 2] = [
             (".vert", gl::VERTEX_SHADER),
             (".frag", gl::FRAGMENT_SHADER),

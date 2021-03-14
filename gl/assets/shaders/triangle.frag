@@ -17,12 +17,12 @@ void main()
 {
     vec4 textureColor = texture(mySampler, FRAGMENT_UV.Uv);
 
-    Color = textureColor * IN.Color;
+    Color = textureColor * vec4(IN.Color.x, IN.Color.y + 1.0 * (cos(time) + 1.0) * 0.2, IN.Color.z, 1.0);
 
-//    Color = vec4(IN.Color + vec3(
-//                                1.0 * (cos(time) + 1.0) * 0.5,
-//                                1.0 * (sin(time) + 1.0) * 0.2,
-//                                0),
-//                                1.0f
-//                 );
+    //    Color = vec4(IN.Color + vec3(
+    //                                1.0 * (cos(time) + 1.0) * 0.5,
+    //                                1.0 * (sin(time) + 1.0) * 0.2,
+    //                                0),
+    //                                1.0f
+    //                 );
 }

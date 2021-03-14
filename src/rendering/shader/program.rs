@@ -102,7 +102,7 @@ impl Program {
         })
     }
 
-    pub fn from_res(gl: &gl::Gl, res: &Resources, name: &str) -> Result<Program, ShaderError> {
+    pub fn from_res(gl: &gl::Gl, res: &Resources<'static>, name: &str) -> Result<Program, ShaderError> {
         const POSSIBLE_EXT: [&str; 2] = [
             ".vert",
             ".frag",

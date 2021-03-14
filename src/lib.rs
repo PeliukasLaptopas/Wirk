@@ -1,3 +1,4 @@
+pub mod fps;
 pub mod engine_error;
 pub mod resources;
 pub mod rendering;
@@ -10,6 +11,7 @@ extern crate gl;
 extern crate vec_2_10_10_10;
 extern crate nalgebra;
 extern crate image;
+extern crate time;
 
 use nalgebra as na;
 use std::rc::Rc;
@@ -25,15 +27,21 @@ use crate::rendering::shader::viewport::Viewport;
 use crate::rendering::shader::color_buffer::ColorBuffer;
 use na::*;
 use std::ffi::CString;
+use crate::resources::texture_cache::TextureCache;
+use crate::fps::*;
+use std::time::{Duration, SystemTime};
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
     let video_subsystem = sdl.video().map_err(err_msg)?;
+    let mut time_subsystem = sdl.timer().unwrap();
 
     let gl_attr = video_subsystem.gl_attr();
 
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
+    gl_attr.set_double_buffer(true); //i think its on by default
     gl_attr.set_context_version(4, 5);
+    gl_attr.int
 
     let window = video_subsystem
         .window("Game", 900, 700)
@@ -51,62 +59,29 @@ pub fn open_window() -> Result<(), failure::Error> {
         gl.ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    let res = Resources::from_relative_path(Path::new("assets")).unwrap();
-
-    // let vertices: Vec<Vertex> = vec![
-    //     Vertex {
-    //         pos: (0.5, -0.5, 0.0).into(),
-    //         color: (1.0, 0.0, 0.0, 1.0).into()
-    //     },
-    //     Vertex {
-    //         pos: (-0.5, -0.5, 0.0).into(),
-    //         color: (0.0, 1.0, 0.0, 1.0).into()
-    //     },
-    //     Vertex {
-    //         pos: (0.0,  0.5, 0.0).into(),
-    //         color: (0.0, 0.0, 1.0, 1.0).into()
-    //     }
-    // ];
-    //
-    // // set up vertex buffer object
-    // let vbo: Buffer<BufferTypeArray> = buffer::ArrayBuffer::new(&gl);
-    // vbo.bind();
-    // vbo.static_draw_data(&vertices);
-    // vbo.unbind();
-    //
-    // // set up vertex array object
-    // let vao: VertexArray = buffer::VertexArray::new(&gl);
-    // vao.bind();
-    // vbo.bind();
-    // Vertex::vertex_attrib_pointers(&gl);
-    // vbo.unbind();
-    // vao.unbind();
-
     let mut viewport = Viewport::for_window(900, 700);
 
     let color_buffer = ColorBuffer::from_color(Vector3::new(0.3, 0.3, 0.5));
 
-    let sprite1 = sprite::Sprite::new(&Vector2::new(-0.5, -0.5), &Vector2::new(0.5, 0.5), &res, &gl)?;
-    let sprite2 = sprite::Sprite::new(&Vector2::new(-0.2, -0.2), &Vector2::new(0.3, 0.3), &res, &gl)?;
+    let mut res = Resources::from_relative_path(Path::new("assets")).unwrap();
+    let sprite1 = sprite::Sprite::new(&Vector2::new(-0.5, -0.5), &Vector2::new(0.5, 0.5), "water.png", &mut res, &gl)?;
+    let sprite2 = sprite::Sprite::new(&Vector2::new(-0.2, -0.2), &Vector2::new(0.3, 0.3), "water.png", &mut res, &gl)?;
 
     viewport.use_viewport(&gl);
     color_buffer.clear_color(&gl);
 
     let mut time: f32 = 1.0;
 
-
-    // let opened_img = ImageReader::open("myimage.png").map_err(|e| e);
+    let mut fps_calculator = fps::FpsCalculator::new();
+    let max_fps: u32 = 60;
 
     let mut event_pump = sdl.event_pump().map_err(err_msg)?;
-    'main: loop {
+    let mut start_ticks: u32 = 0;
 
-        unsafe {
-            // let loc = gl.GetUniformLocation(sprite1.program.id, CString::new("mySampler").unwrap().as_ptr());
-            // gl.Uniform1i(loc, 0);
-            //
-            // let loc = gl.GetUniformLocation(sprite1.program.id, CString::new("time").unwrap().as_ptr());
-            // gl.Uniform1f(loc, time);
-        }
+    'main: loop {
+        start_ticks = time_subsystem.ticks();
+
+        fps_calculator.start(&mut time_subsystem);
         time += 0.1;
 
         for event in event_pump.poll_iter() {
@@ -128,6 +103,13 @@ pub fn open_window() -> Result<(), failure::Error> {
         sprite2.draw(&gl, &time);
 
         window.gl_swap_window();
+
+        let frame_ticks = time_subsystem.ticks() - start_ticks;
+        if ((1000.0 / max_fps as f32) > frame_ticks as f32) {
+            time_subsystem.delay(((1000.0 / max_fps as f32) - frame_ticks as f32) as u32);
+        }
+
+        println!("FPS: {}", fps_calculator.calculate_fps(&mut time_subsystem));
     }
 
     Ok(())

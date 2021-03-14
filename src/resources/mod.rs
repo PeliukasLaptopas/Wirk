@@ -1,3 +1,4 @@
+pub mod texture_cache;
 pub mod resource_utils;
 
 use crate::resources::resource_utils::resource_name_to_path;
@@ -7,11 +8,12 @@ use std::path::{PathBuf, Path};
 use std::ffi::CString;
 use std::{fs};
 use std::io::Read;
+use image::io::Reader as ImageReader;
 
 pub mod errors;
 
 pub struct Resources {
-    root_path: PathBuf
+    pub root_path: PathBuf //todo not pub
 }
 
 impl Resources {
@@ -28,9 +30,31 @@ impl Resources {
         })
     }
 
-    pub fn load_cstring(&self, resource_name: &str) -> Result<CString, ResourceError> {
-        println!("{}", resource_name_to_path(&self.root_path,resource_name).into_os_string().into_string().unwrap());
+    /*pub fn load_png(&self, resource_name: &str) -> Result<CString, ResourceError> {
+        let mut file = fs::File::open(
+            resource_name_to_path(&self.root_path,resource_name)
+        )?;
 
+        let img = ImageReader::open("myimage.png")?.decode()?;
+
+        let opened_img = ImageReader::open("myimage.png").map_err(|e| e);
+
+        // allocate buffer of the same size as file
+        let mut buffer: Vec<u8> = Vec::with_capacity(
+            file.metadata()?.len() as usize + 1
+        );
+        file.read_to_end(&mut buffer)?;
+
+        // check for nul byte
+        if buffer.iter().find(|i| **i == 0).is_some() {
+            return Err(FileContainsNil);
+        }
+
+        Ok(unsafe { CString::from_vec_unchecked(buffer) })
+    }*/
+
+
+    pub fn load_cstring(&self, resource_name: &str) -> Result<CString, ResourceError> {
         let mut file = fs::File::open(
             resource_name_to_path(&self.root_path,resource_name)
         )?;

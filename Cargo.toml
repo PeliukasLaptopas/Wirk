@@ -17,6 +17,7 @@ gl = { path = "gl/" }
 gl_derive = { path = "gl_derive" }
 vec-2-10-10-10 = "0.1.2"
 nalgebra = "0.16"
+image = "0.23.14"
 
 [features]
 gl_debug = ["gl/debug"]

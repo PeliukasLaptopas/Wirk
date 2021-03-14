@@ -6,7 +6,7 @@ use crate::rendering::shader::shader_utils::create_whitespace_cstring_with_len;
 
 pub struct Program {
     gl: gl::Gl,
-    id: gl::types::GLuint,
+    pub id: gl::types::GLuint,
 }
 
 impl Program {

@@ -44,6 +44,15 @@ impl Shader {
 
             let error = create_whitespace_cstring_with_len(len as usize);
 
+            unsafe {
+                gl.GetShaderInfoLog(
+                    id,
+                    len,
+                    std::ptr::null_mut(),
+                    error.as_ptr() as *mut gl::types::GLchar,
+                );
+            }
+
             return Err(error.to_string_lossy().into_owned());
         }
 

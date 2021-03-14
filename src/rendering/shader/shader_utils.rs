@@ -9,5 +9,5 @@ pub fn create_whitespace_cstring_with_len(len: usize) -> CString {
     buffer.extend([b' '].iter().cycle().take(len as usize));
     // convert buffer to CString
 
-    unsafe { CString::from_vec_unchecked(buffer) }
+    unsafe { CString::from_vec_unchecked(buffer) } //todo unsafe not either
 }

@@ -10,4 +10,13 @@ pub enum ShaderError {
     CompileError { name: String, message: String },
     #[fail(display = "Failed to link program {}: {}", name, message)]
     LinkError { name: String, message: String },
+    #[fail(
+    display = "Failed find uniform {} in {}",
+    uniform_name,
+    program_name
+    )]
+    UniformLocationNotFound {
+        program_name: String,
+        uniform_name: String,
+    },
 }

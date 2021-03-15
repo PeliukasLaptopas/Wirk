@@ -9,6 +9,7 @@ use std::ffi::CString;
 use image::io::Reader as ImageReader;
 use image::DynamicImage::*;
 use gl::types::GLuint;
+use crate::rendering::camera_2d::Camera2D;
 
 pub struct Sprite {
     pub program: Program,
@@ -93,7 +94,7 @@ impl Sprite {
         })
     }
 
-    pub fn draw(&self, gl: &gl::Gl, time: &f32) {
+    pub fn draw(&self, camera: &mut Camera2D, gl: &gl::Gl, time: &f32) {
         self.program.use_program();
         self.vao.bind();
 
@@ -104,6 +105,13 @@ impl Sprite {
             let loc = gl.GetUniformLocation(self.program.id, CString::new("time").unwrap().as_ptr());
             gl.Uniform1f(loc, *time);
 
+            let loc = gl.GetUniformLocation(self.program.id, CString::new("P").unwrap().as_ptr());
+            gl.UniformMatrix4fv(
+                loc,
+                1,
+                gl::FALSE,
+                camera.ortho_matrix.as_slice().as_ptr() as *const f32
+            );
 
             gl.ActiveTexture(gl::TEXTURE0);
             gl.BindTexture(gl::TEXTURE_2D, self.texture_id);

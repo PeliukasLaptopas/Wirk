@@ -12,6 +12,7 @@ extern crate vec_2_10_10_10;
 extern crate nalgebra;
 extern crate image;
 extern crate time;
+extern crate nalgebra_glm;
 
 use nalgebra as na;
 use std::rc::Rc;
@@ -30,6 +31,7 @@ use std::ffi::CString;
 use crate::resources::texture_cache::TextureCache;
 use crate::fps::*;
 use std::time::{Duration, SystemTime};
+use crate::rendering::camera_2d::*;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -41,10 +43,12 @@ pub fn open_window() -> Result<(), failure::Error> {
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_double_buffer(true); //i think its on by default
     gl_attr.set_context_version(4, 5);
-    gl_attr.int
+
+    let window_width: u32 = 1200;
+    let window_height: u32 = 1200;
 
     let window = video_subsystem
-        .window("Game", 900, 700)
+        .window("Game", window_width, window_height)
         .opengl()
         .resizable()
         .build()
@@ -59,13 +63,13 @@ pub fn open_window() -> Result<(), failure::Error> {
         gl.ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    let mut viewport = Viewport::for_window(900, 700);
+    let mut viewport = Viewport::for_window(window_width as i32, window_height as i32);
 
     let color_buffer = ColorBuffer::from_color(Vector3::new(0.3, 0.3, 0.5));
 
     let mut res = Resources::from_relative_path(Path::new("assets")).unwrap();
-    let sprite1 = sprite::Sprite::new(&Vector2::new(-0.5, -0.5), &Vector2::new(0.5, 0.5), "water.png", &mut res, &gl)?;
-    let sprite2 = sprite::Sprite::new(&Vector2::new(-0.2, -0.2), &Vector2::new(0.3, 0.3), "water.png", &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(&Vector2::new(0.0, 0.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
+    let sprite2 = sprite::Sprite::new(&Vector2::new(200.0, 200.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
 
     viewport.use_viewport(&gl);
     color_buffer.clear_color(&gl);
@@ -77,6 +81,8 @@ pub fn open_window() -> Result<(), failure::Error> {
 
     let mut event_pump = sdl.event_pump().map_err(err_msg)?;
     let mut start_ticks: u32 = 0;
+
+    let mut camera = Camera2D::new(Vector2::new(0.0, 0.0), 1.0, window_width, window_height);
 
     'main: loop {
         start_ticks = time_subsystem.ticks();
@@ -99,8 +105,11 @@ pub fn open_window() -> Result<(), failure::Error> {
         }
 
         color_buffer.clear(&gl);
-        sprite1.draw(&gl, &time);
-        sprite2.draw(&gl, &time);
+
+        camera.update();
+
+        sprite1.draw(&mut camera, &gl, &&time);
+        sprite2.draw(&mut camera, &gl, &&time);
 
         window.gl_swap_window();
 

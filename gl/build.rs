@@ -15,7 +15,6 @@ fn main() {
         .expect("failed to find target dir")
         .join(env::var("PROFILE").unwrap());
 
-    println!("DOING SOMETHING");
     copy(
         &manifest_dir.join("assets"),
         &executable_path.join("assets"),

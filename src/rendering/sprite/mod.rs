@@ -1,3 +1,5 @@
+pub mod sprite_batch;
+
 use crate::rendering::shader::buffer;
 use crate::resources::Resources;
 use crate::rendering::vertex::Vertex;
@@ -34,34 +36,34 @@ impl Sprite {
         let vertices: Vec<Vertex> = vec![
             //First triangle:
             Vertex { //top right
-                pos: (pos.x + scale.x, pos.y + scale.y, 0.0).into(),
+                pos: (pos.x + scale.x, pos.y + scale.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (1.0, 1.0).into()
             },
             Vertex { // top left
-                pos: (pos.x, pos.y + scale.y, 0.0).into(),
+                pos: (pos.x, pos.y + scale.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (0.0, 1.0).into()
             },
             Vertex { //bottom left
-                pos: (pos.x, pos.y, 0.0).into(),
+                pos: (pos.x, pos.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (0.0, 0.0).into()
             },
 
             //second triangle:
             Vertex { //bottom left
-                pos: (pos.x, pos.y, 0.0).into(),
+                pos: (pos.x, pos.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (0.0, 0.0).into()
             },
             Vertex { // bottom right
-                pos: (pos.x + scale.x, pos.y, 0.0).into(),
+                pos: (pos.x + scale.x, pos.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (1.0, 0.0).into()
             },
             Vertex { //top right
-                pos: (pos.x + scale.x, pos.y + scale.y, 0.0).into(),
+                pos: (pos.x + scale.x, pos.y + scale.y).into(),
                 color: (1.0, 1.0, 1.0, 1.0).into(),
                 uv: (1.0, 1.0).into()
             }
@@ -71,15 +73,12 @@ impl Sprite {
         let vbo = buffer::ArrayBuffer::new(gl);
         vbo.bind();
         vbo.static_draw_data(&vertices);
-        vbo.unbind();
 
         // set up vertex array object
-
         let vao = buffer::VertexArray::new(gl);
 
         vao.bind();
-        vbo.bind();
-        Vertex::vertex_attrib_pointers(gl);
+        Vertex::vertex_attrib_pointers(gl); //vbo here is bind
         vbo.unbind();
         vao.unbind();
 

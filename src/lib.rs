@@ -31,6 +31,7 @@ use std::ffi::CString;
 use crate::resources::texture_cache::TextureCache;
 use crate::fps::*;
 use std::time::{Duration, SystemTime};
+use rendering::sprite::sprite_batch::*;
 use crate::rendering::camera_2d::*;
 
 pub fn open_window() -> Result<(), failure::Error> {
@@ -71,6 +72,8 @@ pub fn open_window() -> Result<(), failure::Error> {
     let sprite1 = sprite::Sprite::new(&Vector2::new(0.0, 0.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
     let sprite2 = sprite::Sprite::new(&Vector2::new(200.0, 200.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
 
+    let mut sprite_batch = SpriteBatch::new(&gl);
+
     viewport.use_viewport(&gl);
     color_buffer.clear_color(&gl);
 
@@ -83,6 +86,8 @@ pub fn open_window() -> Result<(), failure::Error> {
     let mut start_ticks: u32 = 0;
 
     let mut camera = Camera2D::new(Vector2::new(0.0, 0.0), 1.0, window_width, window_height);
+    let texture_id = res.get_texture("water.png", &gl)?; //todo should get width and height from this function and store that here in sprite
+    let mut program = Program::from_res(&gl, &mut res, "shaders/triangle")?;
 
     'main: loop {
         start_ticks = time_subsystem.ticks();
@@ -108,8 +113,22 @@ pub fn open_window() -> Result<(), failure::Error> {
 
         camera.update();
 
-        sprite1.draw(&mut camera, &gl, &&time);
-        sprite2.draw(&mut camera, &gl, &&time);
+        // sprite1.draw(&mut camera, &gl, &&time);
+        // sprite2.draw(&mut camera, &gl, &&time);
+
+        sprite_batch.begin();
+
+        for i in 0..10000 {
+            sprite_batch.add_to_batch(
+                Vector4::new(0.0, 0.0, 200.0, 200.0),
+                Vector4::new(0.0, 0.0, 1.0, 1.0),
+                (1.0, 1.0, 1.0, 1.0).into(),
+                texture_id, 0.0
+            );
+        }
+
+        sprite_batch.end();
+        sprite_batch.render_batch(&time, &mut camera, &mut program, &gl);
 
         window.gl_swap_window();
 

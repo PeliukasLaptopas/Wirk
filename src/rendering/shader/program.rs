@@ -97,7 +97,7 @@ impl Program {
         }
 
         Ok(Program {
-            gl: gl.clone(),
+            gl: gl.clone(), //todo shouldnt i only have one gl (single object no copies because it mutates its state)?
             id: program_id,
         })
     }

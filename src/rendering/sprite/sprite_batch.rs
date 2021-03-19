@@ -136,8 +136,10 @@ impl SpriteBatch {
     */
     pub fn add_to_batch( //todo fix from vec4's to vec2's position and width
             &mut self,
-            dest_rect: Vector4<f32>,
-            uv_rect: Vector4<f32>,
+            sprite_position: Vector2<f32>,
+            sprite_scale: Vector2<f32>,
+            uv_position: Vector2<f32>,
+            uv_scale: Vector2<f32>,
             color: u2_u10_u10_u10_rev_float,
             texture: GLuint,
             depth: f32,
@@ -146,24 +148,24 @@ impl SpriteBatch {
             texture,
             depth,
             top_left: Vertex {
-                pos: (dest_rect.x, dest_rect.y + dest_rect.w).into(),
+                pos: (sprite_position.x, sprite_position.y + sprite_scale.y).into(),
                 color,
-                uv: (uv_rect.x, uv_rect.y + uv_rect.w).into()
+                uv: (uv_position.x, uv_position.y + uv_scale.y).into()
             },
             bottom_left: Vertex {
-                pos: (dest_rect.x, dest_rect.y).into(),
+                pos: (sprite_position.x, sprite_position.y).into(),
                 color,
-                uv: (uv_rect.x, uv_rect.y).into()
+                uv: (uv_position.x, uv_position.y).into()
             },
             top_right:  Vertex {
-                pos: (dest_rect.x + dest_rect.z, dest_rect.y + dest_rect.w).into(),
+                pos: (sprite_position.x + sprite_scale.x, sprite_position.y + sprite_scale.y).into(),
                 color,
-                uv: (uv_rect.x + uv_rect.z, uv_rect.y + uv_rect.w).into()
+                uv: (uv_position.x + uv_scale.x, uv_position.y + uv_scale.y).into()
         },
             bottom_right: Vertex {
-                pos: (dest_rect.x + dest_rect.z, dest_rect.y).into(),
+                pos: (sprite_position.x + sprite_scale.x, sprite_position.y).into(),
                 color,
-                uv: (uv_rect.x + uv_rect.z, uv_rect.y).into()
+                uv: (uv_position.x + uv_scale.x, uv_position.y).into()
             }
         };
 

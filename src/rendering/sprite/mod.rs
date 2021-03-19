@@ -12,114 +12,71 @@ use image::io::Reader as ImageReader;
 use image::DynamicImage::*;
 use gl::types::GLuint;
 use crate::rendering::camera_2d::Camera2D;
+use crate::rendering::sprite::sprite_batch::SpriteBatch;
+use wrapped2d::b2::{BodyHandle, World};
+use wrapped2d::user_data::NoUserData;
+use wrapped2d::b2;
+use nalgebra::{Vector4, Vector2};
 
 pub struct Sprite {
-    pub program: Program,
-    _vbo: buffer::ArrayBuffer, // _ to disable warning about not used vbo
-    vao: buffer::VertexArray,
     texture_id: GLuint,
+    pub b2_body: BodyHandle,
+    scale: Vector2<f32>,
 }
 
 impl Sprite {
     pub fn new(
-        pos: &Vector2<f32>,
-        scale: &Vector2<f32>,
+        pos: Vector2<f32>,
+        scale: Vector2<f32>,
         texture_name: &'static str,
+        world: &mut World<NoUserData>,
         res: &mut Resources<'static>,
-        gl: &gl::Gl
+        gl: &gl::Gl,
     ) -> Result<Sprite, failure::Error> {
-
-        // set up shader program
-        let program = Program::from_res(gl, res, "shaders/triangle")?;
-
-        // set up vertex buffer object
-        let vertices: Vec<Vertex> = vec![
-            //First triangle:
-            Vertex { //top right
-                pos: (pos.x + scale.x, pos.y + scale.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (1.0, 1.0).into()
-            },
-            Vertex { // top left
-                pos: (pos.x, pos.y + scale.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (0.0, 1.0).into()
-            },
-            Vertex { //bottom left
-                pos: (pos.x, pos.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (0.0, 0.0).into()
-            },
-
-            //second triangle:
-            Vertex { //bottom left
-                pos: (pos.x, pos.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (0.0, 0.0).into()
-            },
-            Vertex { // bottom right
-                pos: (pos.x + scale.x, pos.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (1.0, 0.0).into()
-            },
-            Vertex { //top right
-                pos: (pos.x + scale.x, pos.y + scale.y).into(),
-                color: (1.0, 1.0, 1.0, 1.0).into(),
-                uv: (1.0, 1.0).into()
-            }
-        ];
-
-
-        let vbo = buffer::ArrayBuffer::new(gl);
-        vbo.bind();
-        vbo.static_draw_data(&vertices);
-
-        // set up vertex array object
-        let vao = buffer::VertexArray::new(gl);
-
-        vao.bind();
-        Vertex::vertex_attrib_pointers(gl); //vbo here is bind
-        vbo.unbind();
-        vao.unbind();
-
-
         let texture_id = res.get_texture(texture_name, gl)?; //todo should get width and height from this function and store that here in sprite
 
+        let mut b_def = b2::BodyDef {
+            body_type: b2::BodyType::Dynamic,
+            position: b2::Vec2 { x: pos.x, y: pos.y },
+            ..b2::BodyDef::new()
+        };
+
+        let body = world.create_body(&b_def);
+        let shape = b2::PolygonShape::new_box(scale.x, scale.y);
+
+        let mut fixture = b2::FixtureDef {
+            density: 1.,
+            restitution: 0.2,
+            friction: 0.3,
+            ..b2::FixtureDef::new()
+        };
+
+        world.body_mut(body).create_fixture(&shape, &mut fixture);
+
+
         Ok(Sprite {
-            program,
-            _vbo: vbo,
-            vao,
-            texture_id
+            texture_id,
+            b2_body: body,
+            scale
         })
     }
 
-    pub fn draw(&self, camera: &mut Camera2D, gl: &gl::Gl, time: &f32) {
-        self.program.use_program();
-        self.vao.bind();
+    // pub fn update_pos(&mut self, new_position: Vector2<f32>) {
+        // self.pos = new_position;
+    // }
 
-        unsafe {
-            let loc = gl.GetUniformLocation(self.program.id, CString::new("mySampler").unwrap().as_ptr());
-            gl.Uniform1i(loc, 0);
+    pub fn draw(&self, world: &mut World<NoUserData>, body: &BodyHandle, camera: &mut Camera2D, gl: &gl::Gl, sprite_batch: &mut SpriteBatch) {
+        let b2_body = world.body_mut(*body);
+        let pos = Vector2::new(b2_body.position().x, b2_body.position().y);
 
-            let loc = gl.GetUniformLocation(self.program.id, CString::new("time").unwrap().as_ptr());
-            gl.Uniform1f(loc, *time);
-
-            let loc = gl.GetUniformLocation(self.program.id, CString::new("P").unwrap().as_ptr());
-            gl.UniformMatrix4fv(
-                loc,
-                1,
-                gl::FALSE,
-                camera.ortho_matrix.as_slice().as_ptr() as *const f32
-            );
-
-            gl.ActiveTexture(gl::TEXTURE0);
-            gl.BindTexture(gl::TEXTURE_2D, self.texture_id);
-
-            gl.DrawArrays(
-                gl::TRIANGLES, // mode
-                0, // starting index in the enabled arrays
-                6 // number of indices to be rendered
-            );
-        }
+        sprite_batch.add_to_batch(
+            pos,
+            self.scale.clone().into(),
+            Vector2::new(0.0, 0.0),
+            Vector2::new(1.0, 1.0),
+            (1.0, 1.0, 1.0, 1.0).into(),
+            self.texture_id,
+            0.0
+        );
     }
 }

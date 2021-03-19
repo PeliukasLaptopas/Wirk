@@ -14,6 +14,7 @@ extern crate nalgebra;
 extern crate image;
 extern crate time;
 extern crate nalgebra_glm;
+extern crate wrapped2d;
 
 use nalgebra as na;
 use std::rc::Rc;
@@ -37,6 +38,10 @@ use sdl2::event::Event;
 use crate::rendering::camera_2d::*;
 use sdl2::keyboard::Keycode;
 use crate::input::InputManager;
+
+use wrapped2d::b2;
+use wrapped2d::user_data::NoUserData;
+use wrapped2d::b2::World;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -73,8 +78,6 @@ pub fn open_window() -> Result<(), failure::Error> {
     let color_buffer = ColorBuffer::from_color(Vector3::new(0.3, 0.3, 0.5));
 
     let mut res = Resources::from_relative_path(Path::new("assets")).unwrap();
-    // let sprite1 = sprite::Sprite::new(&Vector2::new(0.0, 0.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
-    // let sprite2 = sprite::Sprite::new(&Vector2::new(200.0, 200.0), &Vector2::new(200.0, 200.0), "water.png", &mut res, &gl)?;
 
     let mut sprite_batch = SpriteBatch::new(&gl);
 
@@ -97,7 +100,21 @@ pub fn open_window() -> Result<(), failure::Error> {
 
     let mut input_manager = InputManager::new();
 
+
+    //--------------------------
+    let gravity = b2::Vec2 { x: 0., y: -10. };
+
+    let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
+    //--------------------------
+    let sprite = sprite::Sprite::new(Vector2::new(750.0, 750.0), Vector2::new(200.0, 200.0), "water.png", &mut world, &mut res, &gl)?;
+
     'main: loop {
+        world.step(1.0 / 60.0, 6, 2);
+
+        println!("Pos: {}; {}",
+                 world.body(sprite.b2_body).position().x,
+                 world.body(sprite.b2_body).position().y);
+
         start_ticks = time_subsystem.ticks();
 
         unsafe {
@@ -129,41 +146,41 @@ pub fn open_window() -> Result<(), failure::Error> {
             }
         }
 
-        let speed: f32 = 10.0;
+        /*let speed: f32 = 10.0;
         if (input_manager.is_key_pressed(&Keycode::A)) {
-            camera_pos -= Vector2::new(speed, 0.0);
-            camera.set_position(camera_pos);
+            player_pos -= Vector2::new(speed, 0.0);
+            sprite1.update_pos(player_pos);
         }
 
         if (input_manager.is_key_pressed(&Keycode::D)) {
-            camera_pos += Vector2::new(speed, 0.0);
-            camera.set_position(camera_pos);
+            player_pos += Vector2::new(speed, 0.0);
+            sprite1.update_pos(player_pos);
         }
 
         if (input_manager.is_key_pressed(&Keycode::W)) {
-            camera_pos += Vector2::new(0.0, speed);
-            camera.set_position(camera_pos);
+            player_pos += Vector2::new(0.0, speed);
+            sprite1.update_pos(player_pos);
         }
 
         if (input_manager.is_key_pressed(&Keycode::S)) {
-            camera_pos -= Vector2::new(0.0, speed);
-            camera.set_position(camera_pos);
-        }
+            player_pos -= Vector2::new(0.0, speed);
+            sprite1.update_pos(player_pos);
+        }*/
 
         color_buffer.clear(&gl);
 
         camera.update();
 
-
-        // sprite1.draw(&mut camera, &gl, &&time);
-        // sprite2.draw(&mut camera, &gl, &&time);
-
         sprite_batch.begin();
 
+        let pos = Vector2::new(world.body(sprite.b2_body).position().x, world.body(sprite.b2_body).position().y);
+        let scale = Vector2::new(60.0, 100.0);
         // for i in 0..10000 {
             sprite_batch.add_to_batch(
-                Vector4::new(50.0, 50.0, 60.0, 100.0),
-                Vector4::new(0.0, 0.0, 1.0, 1.0),
+                pos,
+                scale,
+                Vector2::new(0.0, 0.0),
+                Vector2::new(1.0, 1.0),
                 (1.0, 1.0, 1.0, 1.0).into(),
                 texture_id, 0.0
             );

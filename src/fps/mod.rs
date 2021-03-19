@@ -47,9 +47,6 @@ impl FpsCalculator {
 
         let mut frame_time_average: f32 = self.frame_times.iter().sum::<f32>() / count as f32;
 
-
-
-
         if (frame_time_average > 0.0) {
             self.fps = 1000.0 / frame_time_average;
         } else {

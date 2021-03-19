@@ -44,18 +44,22 @@ impl Resources<'_> {
         let mut texture_id: gl::types::GLuint = 0;
         unsafe {
             gl.GenTextures(1, &mut texture_id);
+
             gl.BindTexture(gl::TEXTURE_2D, texture_id);
-            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, 64, 64, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
+            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, 6, 10, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
 
             gl.GenerateMipmap(gl::TEXTURE_2D);
 
             gl.BindTexture(gl::TEXTURE_2D, 0);
         }
 
+        println!("Texture: {}", texture_id);
+
+        //todo clear bytes?
         Ok(texture_id) //todo check if error
     }
 

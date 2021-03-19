@@ -49,11 +49,10 @@ impl Camera2D {
 
     pub fn update(&mut self) {
         if (self.needs_matrix_update) {
-            let translate = Vector3::new(-self.position.x, -self.position.x, 0.0);
+            let translate = Vector3::new(-self.position.x, -self.position.y, 0.0);
             self.camera_matrix = nalgebra_glm::translate(&self.ortho_matrix, &translate);
             let scale = Vector3::new(self.scale, self.scale, 0.0);
-            self.camera_matrix = nalgebra_glm::scale(&self.ortho_matrix, &scale);
-
+            self.camera_matrix = nalgebra_glm::scale(&self.camera_matrix, &scale);
             self.needs_matrix_update = false;
         }
     }

@@ -71,8 +71,8 @@ impl SpriteBatch {
 
         let mut cv: usize = 0; //current vertex
 
-        println!("Size of glyps {}", self.glyphs.len());
-        println!("Size of vertices {}", vertices.len());
+        // println!("Size of glyps {}", self.glyphs.len());
+        // println!("Size of vertices {}", vertices.len());
 
         vertices[cv] = self.glyphs[0].top_left; cv += 1;
         vertices[cv] = self.glyphs[0].bottom_left; cv += 1;
@@ -182,13 +182,12 @@ impl SpriteBatch {
 
             let loc = gl.GetUniformLocation(program.id, CString::new("time").unwrap().as_ptr());
             gl.Uniform1f(loc, *time);
-
             let loc = gl.GetUniformLocation(program.id, CString::new("P").unwrap().as_ptr());
             gl.UniformMatrix4fv(
                 loc,
                 1,
                 gl::FALSE,
-                camera.ortho_matrix.as_slice().as_ptr() as *const f32
+                camera.camera_matrix.as_slice().as_ptr() as *const f32
             );
 
             for batch in &self.render_batches {

@@ -8,6 +8,7 @@ use sdl2::log::Category::Render;
 use std::ffi::CString;
 use crate::rendering::shader::program::Program;
 use crate::rendering::camera_2d::Camera2D;
+use nalgebra_glm::{cos, sin};
 
 
 struct Glyph {
@@ -31,6 +32,15 @@ pub struct SpriteBatch {
     vao: buffer::VertexArray,
     glyphs: Vec<Glyph>,
     render_batches: Vec<RenderBatch>,
+}
+
+impl Glyph {
+    pub fn rotate_point(pos: Vector2<f32>, angle: &f32) -> Vector2<f32> {
+        Vector2::new(
+            pos.x * angle.cos() - pos.y * angle.sin(),
+            pos.x * angle.sin() + pos.y * angle.cos()
+        )
+    }
 }
 
 impl SpriteBatch {
@@ -142,28 +152,46 @@ impl SpriteBatch {
             uv_scale: Vector2<f32>,
             color: u2_u10_u10_u10_rev_float,
             texture: GLuint,
+            angle: &f32, //radians
             depth: f32,
         ) {
+
+        let angle = angle / 57.2957795;
+
+        let half_dimensions = Vector2::new(sprite_scale.x / 2.0, sprite_scale.y / 2.0);
+
+        //Get points centered at origin
+        let top_left_at_origin     = Vector2::new(-half_dimensions.x, half_dimensions.y);
+        let bottom_left_at_origin  = Vector2::new(-half_dimensions.x, -half_dimensions.y);
+        let bottom_right_at_origin = Vector2::new(half_dimensions.x, -half_dimensions.y);
+        let top_right_at_origin    = Vector2::new(half_dimensions.x, half_dimensions.y);
+
+        //Rotate the points
+        let rotated_top_left     = Glyph::rotate_point(top_left_at_origin, &angle) + half_dimensions;
+        let rotated_bottom_left  = Glyph::rotate_point(bottom_left_at_origin, &angle) + half_dimensions;
+        let rotated_bottom_right = Glyph::rotate_point(bottom_right_at_origin, &angle) + half_dimensions;
+        let rotated_top_right    = Glyph::rotate_point(top_right_at_origin, &angle) + half_dimensions;
+
         let new_glyph = Glyph {
             texture,
             depth,
             top_left: Vertex {
-                pos: (sprite_position.x, sprite_position.y + sprite_scale.y).into(),
+                pos: (sprite_position.x + rotated_top_left.x, sprite_position.y + rotated_top_left.y).into(),
                 color,
                 uv: (uv_position.x, uv_position.y + uv_scale.y).into()
             },
             bottom_left: Vertex {
-                pos: (sprite_position.x, sprite_position.y).into(),
+                pos: (sprite_position.x + rotated_bottom_left.x, sprite_position.y + rotated_bottom_left.y).into(),
                 color,
                 uv: (uv_position.x, uv_position.y).into()
             },
             top_right:  Vertex {
-                pos: (sprite_position.x + sprite_scale.x, sprite_position.y + sprite_scale.y).into(),
+                pos: (sprite_position.x + rotated_top_right.x, sprite_position.y + rotated_top_right.y).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y + uv_scale.y).into()
         },
             bottom_right: Vertex {
-                pos: (sprite_position.x + sprite_scale.x, sprite_position.y).into(),
+                pos: (sprite_position.x + rotated_bottom_right.x, sprite_position.y + rotated_bottom_right.y).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y).into()
             }

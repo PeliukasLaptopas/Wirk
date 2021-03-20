@@ -42,6 +42,11 @@ use crate::input::InputManager;
 use wrapped2d::b2;
 use wrapped2d::user_data::NoUserData;
 use wrapped2d::b2::World;
+use wrapped2d::dynamics::body::BodyType::Static;
+use wrapped2d::dynamics::body::BodyType::Dynamic;
+
+use rand::prelude::*;
+use crate::rendering::sprite::Sprite;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -93,27 +98,35 @@ pub fn open_window() -> Result<(), failure::Error> {
     let mut start_ticks: u32 = 0;
 
     let mut camera_pos = Vector2::new(50.0, 50.0);
-    let mut camera = Camera2D::new(camera_pos, 1.0, window_width, window_height);
+    let camera_scale = 32.0; //32 pixels per meter
+    let mut camera = Camera2D::new(camera_pos, camera_scale, window_width, window_height);
 
-    let texture_id = res.get_texture("Character.png", &gl)?; //todo should get width and height from this function and store that here in sprite
     let mut program = Program::from_res(&gl, &mut res, "shaders/triangle")?;
 
     let mut input_manager = InputManager::new();
-
 
     //--------------------------
     let gravity = b2::Vec2 { x: 0., y: -10. };
 
     let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
     //--------------------------
-    let sprite = sprite::Sprite::new(Vector2::new(750.0, 750.0), Vector2::new(200.0, 200.0), "water.png", &mut world, &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(Vector2::new(25.0, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?;
+    let sprite2 = sprite::Sprite::new(Vector2::new(0.0, 10.0), Vector2::new(60.0, 1.0), "water.png", &Static, &mut world, &mut res, &gl)?;
+
+    let mut rng = thread_rng();
+    let mut sprites: Vec<Sprite> = vec![];
+    for i in 0..1000 {
+        sprites.push(
+            sprite::Sprite::new(Vector2::new(0.0 + rng.gen_range(0..29) as f32, 10.0 + rng.gen_range(0..30) as f32), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?
+        );
+    }
 
     'main: loop {
         world.step(1.0 / 60.0, 6, 2);
 
-        println!("Pos: {}; {}",
-                 world.body(sprite.b2_body).position().x,
-                 world.body(sprite.b2_body).position().y);
+        // println!("Pos: {}; {}",
+        //          world.body(sprite.b2_body).position().x,
+        //          world.body(sprite.b2_body).position().y);
 
         start_ticks = time_subsystem.ticks();
 
@@ -123,7 +136,7 @@ pub fn open_window() -> Result<(), failure::Error> {
         }
 
         fps_calculator.start(&mut time_subsystem);
-        time += 0.1;
+        time += 5.0;
 
 
         for event in event_pump.poll_iter() {
@@ -173,18 +186,27 @@ pub fn open_window() -> Result<(), failure::Error> {
 
         sprite_batch.begin();
 
-        let pos = Vector2::new(world.body(sprite.b2_body).position().x, world.body(sprite.b2_body).position().y);
-        let scale = Vector2::new(60.0, 100.0);
-        // for i in 0..10000 {
-            sprite_batch.add_to_batch(
-                pos,
+        let scale = Vector2::new(0.6, 1.0);
+        // for i in 0..5 {
+            /*sprite_batch.add_to_batch(
+                sprite.get_pos(&world),
                 scale,
                 Vector2::new(0.0, 0.0),
                 Vector2::new(1.0, 1.0),
                 (1.0, 1.0, 1.0, 1.0).into(),
-                texture_id, 0.0
-            );
+                sprite.texture_id,
+                &time,
+                0.0
+            );*/
         // }
+
+
+        for spr in sprites.iter_mut() {
+            spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
+        }
+
+        sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
+        sprite2.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
 
         sprite_batch.end();
         sprite_batch.render_batch(&time, &mut camera, &mut program, &gl);

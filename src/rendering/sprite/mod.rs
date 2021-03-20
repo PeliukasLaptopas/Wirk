@@ -21,7 +21,7 @@ use wrapped2d::wrap::Wrapped;
 
 pub struct Sprite {
     pub texture_id: GLuint,
-    b2_body: BodyHandle,
+    pub b2_body: BodyHandle,
     scale: Vector2<f32>,
 }
 
@@ -44,7 +44,7 @@ impl Sprite {
         };
 
         let body = world.create_body(&b_def);
-        let shape = b2::PolygonShape::new_box(scale.x, scale.y);
+        let shape = b2::PolygonShape::new_box(scale.x / 2.0, scale.y / 2.0);
 
         let mut fixture = b2::FixtureDef {
             density: 1.,

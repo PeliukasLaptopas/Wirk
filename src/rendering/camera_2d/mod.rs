@@ -56,4 +56,13 @@ impl Camera2D {
             self.needs_matrix_update = false;
         }
     }
+
+    pub fn convert_screen_to_world(&self, screen_coords: Vector2<i32>) -> Vector2<f32> {
+        //Make it so that 0 is at the center
+        let zero_at_center = Vector2::new(screen_coords.x - (self.screen_width / 2) as i32, self.screen_height as i32 - screen_coords.y - (self.screen_height / 2) as i32);
+        //Scale the coordinates
+        let scaled = Vector2::new(zero_at_center.x as f32 / self.scale, zero_at_center.y as f32 / self.scale);
+        //Transalte with camera position
+        scaled + &self.position
+    }
 }

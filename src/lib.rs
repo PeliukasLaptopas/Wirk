@@ -41,7 +41,7 @@ use crate::input::InputManager;
 
 use wrapped2d::b2;
 use wrapped2d::user_data::NoUserData;
-use wrapped2d::b2::World;
+use wrapped2d::b2::{World, Vec2};
 use wrapped2d::dynamics::body::BodyType::Static;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 
@@ -97,7 +97,7 @@ pub fn open_window() -> Result<(), failure::Error> {
     let mut event_pump = sdl.event_pump().map_err(err_msg)?;
     let mut start_ticks: u32 = 0;
 
-    let mut camera_pos = Vector2::new(50.0, 50.0);
+    let mut camera_pos = Vector2::new(0.0, 0.0);
     let camera_scale = 32.0; //32 pixels per meter
     let mut camera = Camera2D::new(camera_pos, camera_scale, window_width, window_height);
 
@@ -110,16 +110,23 @@ pub fn open_window() -> Result<(), failure::Error> {
 
     let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
     //--------------------------
-    let sprite1 = sprite::Sprite::new(Vector2::new(25.0, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?;
-    let sprite2 = sprite::Sprite::new(Vector2::new(0.0, 10.0), Vector2::new(60.0, 1.0), "water.png", &Static, &mut world, &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?;
+    let sprite2 = sprite::Sprite::new(Vector2::new(25.6, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Static, &mut world, &mut res, &gl)?;
+    let ground = sprite::Sprite::new(Vector2::new(0.0, 10.0), Vector2::new(60.0, 1.0), "water.png", &Static, &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];
     for i in 0..1000 {
-        sprites.push(
-            sprite::Sprite::new(Vector2::new(0.0 + rng.gen_range(0..29) as f32, 10.0 + rng.gen_range(0..30) as f32), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?
-        );
+        // sprites.push(
+        //     sprite::Sprite::new(Vector2::new(0.0 + rng.gen_range(0..29) as f32, 10.0 + rng.gen_range(0..30) as f32), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?
+        // );
     }
+
+
+    let mut new_p = Vec2 {
+        x: 0.0,
+        y: 10.0
+    };
 
     'main: loop {
         world.step(1.0 / 60.0, 6, 2);
@@ -127,6 +134,9 @@ pub fn open_window() -> Result<(), failure::Error> {
         // println!("Pos: {}; {}",
         //          world.body(sprite.b2_body).position().x,
         //          world.body(sprite.b2_body).position().y);
+
+        // new_p.y -= 0.01;
+        world.body_mut(ground.b2_body).set_transform(&new_p, 0.0);
 
         start_ticks = time_subsystem.ticks();
 
@@ -136,7 +146,7 @@ pub fn open_window() -> Result<(), failure::Error> {
         }
 
         fps_calculator.start(&mut time_subsystem);
-        time += 5.0;
+        time -= 0.25;
 
 
         for event in event_pump.poll_iter() {
@@ -155,9 +165,27 @@ pub fn open_window() -> Result<(), failure::Error> {
                 Event::KeyUp { keycode: Some(key_code), repeat: false, .. } => {
                     input_manager.release_key(&key_code);
                 }
+                Event::MouseMotion { x, y, .. } => {
+                    input_manager.set_mouse_coord(Vector2::new(x, y))
+                }
                 _ => {}
             }
         }
+
+
+        if (input_manager.is_key_pressed(&Keycode::Space)) {
+            camera.set_scale(camera.scale + 1.0);
+        }
+        if (input_manager.is_key_pressed(&Keycode::LShift)) {
+            camera.set_scale(camera.scale - 1.0);
+        }
+
+        let mouse_pos = Vector2::new(input_manager.screen_mouse_position.x, input_manager.screen_mouse_position.y);
+        let mouse_pos_world = camera.convert_screen_to_world(Vector2::new(mouse_pos.x, mouse_pos.y));
+        world.body_mut(sprite2.b2_body).set_transform(&Vec2 {x: mouse_pos_world.x, y: mouse_pos_world.y}, 0.0);
+
+        println!("Mouse coords world: {} {}", mouse_pos_world.x, mouse_pos_world.y);
+        println!("sprite pos: {} {}", world.body(sprite1.b2_body).position().x, world.body(sprite1.b2_body).position().y);
 
         /*let speed: f32 = 10.0;
         if (input_manager.is_key_pressed(&Keycode::A)) {
@@ -202,11 +230,12 @@ pub fn open_window() -> Result<(), failure::Error> {
 
 
         for spr in sprites.iter_mut() {
-            spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
+            // spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
         }
 
         sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
         sprite2.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
+        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
 
         sprite_batch.end();
         sprite_batch.render_batch(&time, &mut camera, &mut program, &gl);

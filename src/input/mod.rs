@@ -2,16 +2,23 @@ use std::collections::HashMap;
 use sdl2::event::{EventPollIterator, Event};
 use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
+use nalgebra::Vector2;
 
 pub struct InputManager {
-    key_map: HashMap<Keycode, bool>
+    key_map: HashMap<Keycode, bool>,
+    pub screen_mouse_position: Vector2<i32>,
 }
 
 impl InputManager {
     pub fn new() -> InputManager {
         InputManager {
-            key_map: HashMap::new()
+            key_map: HashMap::new(),
+            screen_mouse_position: Vector2::new(0, 0),
         }
+    }
+
+    pub fn set_mouse_coord(&mut self, coord: Vector2<i32>) {
+        self.screen_mouse_position = coord;
     }
 
     pub fn press_key(&mut self, key_id: &Keycode) {
@@ -27,17 +34,6 @@ impl InputManager {
             self.key_map[key_id]
         } else {
             false
-        }
-    }
-
-    pub fn run(&self, epi: &mut EventPump) {
-        for event in epi.poll_iter() {
-            match event {
-                Event::KeyDown { keycode: Some(key_code), repeat: false, .. } => {
-                    println!("keycode: {}", key_code);
-                }
-                _ => {}
-            }
         }
     }
 }

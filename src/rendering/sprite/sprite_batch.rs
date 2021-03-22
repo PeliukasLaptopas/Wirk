@@ -172,26 +172,28 @@ impl SpriteBatch {
         let rotated_bottom_right = Glyph::rotate_point(bottom_right_at_origin, &angle) + half_dimensions;
         let rotated_top_right    = Glyph::rotate_point(top_right_at_origin, &angle) + half_dimensions;
 
+        //todo Subtracting (<..> - sprite_scale.x / 2.0) is needed because of some WEIRD Box2d box collider offsets?????? (pos: (sprite_position.x + rotated_top_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_left.y).into(), <..>)
+        //todo Because of this, the pivot (origin) is literally at bottom middle. Fix box2d collider not this rendering!
         let new_glyph = Glyph {
             texture,
             depth,
             top_left: Vertex {
-                pos: (sprite_position.x + rotated_top_left.x, sprite_position.y + rotated_top_left.y).into(),
+                pos: (sprite_position.x + rotated_top_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_left.y).into(),
                 color,
                 uv: (uv_position.x, uv_position.y + uv_scale.y).into()
             },
             bottom_left: Vertex {
-                pos: (sprite_position.x + rotated_bottom_left.x, sprite_position.y + rotated_bottom_left.y).into(),
+                pos: (sprite_position.x + rotated_bottom_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_left.y).into(),
                 color,
                 uv: (uv_position.x, uv_position.y).into()
             },
             top_right:  Vertex {
-                pos: (sprite_position.x + rotated_top_right.x, sprite_position.y + rotated_top_right.y).into(),
+                pos: (sprite_position.x + rotated_top_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_right.y).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y + uv_scale.y).into()
         },
             bottom_right: Vertex {
-                pos: (sprite_position.x + rotated_bottom_right.x, sprite_position.y + rotated_bottom_right.y).into(),
+                pos: (sprite_position.x + rotated_bottom_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_right.y).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y).into()
             }

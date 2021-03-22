@@ -110,7 +110,7 @@ pub fn open_window() -> Result<(), failure::Error> {
     let mut input_manager = InputManager::new();
 
     //--------------------------
-    let gravity = b2::Vec2 { x: 0., y: -10. };
+    let gravity = b2::Vec2 { x: 0., y: -9.8 };
 
     let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
     //--------------------------
@@ -122,16 +122,19 @@ pub fn open_window() -> Result<(), failure::Error> {
     let no_color: u2_u10_u10_u10_rev_float = (1.0, 1.0, 1.0, 1.0).into();
 
     let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), "Character.png", &Dynamic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }),  (1.0, 1.0, 1.0, 1.0).into(),&mut world, &mut res, &gl)?;
-    let mouse_sprite = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Kinematic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
-    let ground = sprite::Sprite::new(Vector2::new(10.0, 10.0), "water.png", &Static, ColliderType::Box(Vec2 { x: 5.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let mouse_sprite = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 1.4 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let bottom_wall = sprite::Sprite::new(Vector2::new(15.0, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 40.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let top_wall = sprite::Sprite::new(Vector2::new(15.0, 36.5), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 40.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let left_wall = sprite::Sprite::new(Vector2::new(-2.0, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 40.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let right_wall = sprite::Sprite::new(Vector2::new(34.5, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 40.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
     let circle_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), "circle.png", &Dynamic, ColliderType::Circle(1.0), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];
     println!("{}", rng.gen::<f64>());
-    for i in 0..500 {
+    for i in 0..1000 {
         sprites.push(
-            sprite::Sprite::new(Vector2::new(15.0+ rng.gen_range(0..20) as f32, 15.0 + rng.gen_range(0..20) as f32), "circle.png", &Dynamic, ColliderType::Circle(1.0), (rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0).into(), &mut world, &mut res, &gl)?
+            sprite::Sprite::new(Vector2::new(0.0+ rng.gen_range(3..32) as f32, 15.0 + rng.gen_range(0..20) as f32), "circle.png", &Dynamic, ColliderType::Circle(1.0 -rng.gen::<f32>() +0.3), (rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0).into(), &mut world, &mut res, &gl)?
         );
     }
 
@@ -250,7 +253,10 @@ pub fn open_window() -> Result<(), failure::Error> {
 
         mouse_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
         sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch, current_angle);
-        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        bottom_wall.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        left_wall.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        top_wall.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        right_wall.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
         circle_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
 
         sprite_batch.end();

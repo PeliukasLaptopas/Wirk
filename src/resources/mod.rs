@@ -26,6 +26,7 @@ impl Resources<'_> {
     pub fn get_texture(&mut self, name: &'static str, gl: &gl::Gl) -> Result<Texture, failure::Error> {
         let texture_opt = self.texture_cache.get(name);
 
+
         return match texture_opt {
             Some(texture) => Ok(Texture {
                 id: texture.id,
@@ -40,6 +41,7 @@ impl Resources<'_> {
                     width: texture_id.width,
                     height: texture_id.height
                 });
+
                 Ok(texture_id)
             }
         }
@@ -69,8 +71,6 @@ impl Resources<'_> {
 
             gl.BindTexture(gl::TEXTURE_2D, 0);
         }
-
-        println!("Texture: {}", texture_id);
 
         //todo clear bytes?
         Ok(Texture {

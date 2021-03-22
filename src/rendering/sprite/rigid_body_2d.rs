@@ -17,30 +17,93 @@ pub enum ColliderType {
 }
 
 impl RigidBody2D {
-    fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2) -> BodyHandle {
-        let mut b_def = b2::BodyDef {
-            body_type: *body_type,
-            position,
-            ..b2::BodyDef::new()
-        };
+    /*fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2) -> BodyHandle {
+                let mut b_def = b2::BodyDef {
+                    body_type: *body_type,
+                    ..b2::BodyDef::new()
+                };
 
-        let body = world.create_body(&b_def);
+                // let body = world.create_body(&b_def);
+
+                let mut fixture = b2::FixtureDef {
+                    density: 1.,
+                    restitution: 0.6,
+                    friction: 0.3,
+                    ..b2::FixtureDef::new()
+                };
+
+                let body = match shape {
+                    ColliderType::Circle(radius) => {
+                        let body = world.create_body(&b_def);
+                        b_def.position = Vec2 {
+                            x: position.x,
+                            y: position.y
+                        };
+
+                        let circle_shape = b2::CircleShape::new_with(Vec2{x:0.0, y:0.0}, radius / 2.0);
+                        world.body_mut(body).create_fixture(&circle_shape, &mut fixture);
+                        body
+                    },
+                    ColliderType::Box(scale) => {
+                        let body = world.create_body(&b_def);
+                        b_def.position = Vec2 {
+                            x: position.x,
+                            y: position.y
+                        };
+
+                        let polygon_shape = b2::PolygonShape::new_oriented_box(scale.x / 2.0, scale.y / 2.0, &Vec2 { x: 0.0 ,y: 0.0 }, 0.0);
+                        world.body_mut(body).create_fixture(&polygon_shape, &mut fixture);
+                        body
+                    },
+                };
+
+                body
+            }
+     */
+
+    fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2) -> BodyHandle {
 
         let mut fixture = b2::FixtureDef {
             density: 1.,
-            restitution: 0.2,
+            restitution: 0.6,
             friction: 0.3,
             ..b2::FixtureDef::new()
         };
 
-        match shape {
+        let body = match shape {
             ColliderType::Circle(radius) => {
+                let mut b_def = b2::BodyDef {
+                    body_type: *body_type,
+                    position: Vec2 {
+                        x: position.x,
+                        y: position.y
+                    },
+                    ..b2::BodyDef::new()
+                };
+
+                let body = world.create_body(&b_def);
+
                 let circle_shape = b2::CircleShape::new_with(Vec2{x:0.0, y:0.0}, radius / 2.0);
                 world.body_mut(body).create_fixture(&circle_shape, &mut fixture);
+
+                body
             },
             ColliderType::Box(scale) => {
-                let polygon_shape = b2::PolygonShape::new_oriented_box(scale.x / 2.0, scale.y / 2.0, &Vec2 { x: 0.0 ,y: 0.0 }, 0.0);
+                let mut b_def = b2::BodyDef {
+                    body_type: *body_type,
+                    position: Vec2 {
+                        x: position.x + 2.5,
+                        y: position.y
+                    },
+                    ..b2::BodyDef::new()
+                };
+
+                let body = world.create_body(&b_def);
+
+                let polygon_shape = b2::PolygonShape::new_box(scale.x / 2.0, scale.y / 2.0/*, &Vec2 { x: 0.0 ,y: 0.0 }, 0.0*/);
                 world.body_mut(body).create_fixture(&polygon_shape, &mut fixture);
+
+                body
             },
         };
 

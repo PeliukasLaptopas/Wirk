@@ -212,6 +212,7 @@ impl SpriteBatch {
 
             let loc = gl.GetUniformLocation(program.id, CString::new("time").unwrap().as_ptr());
             gl.Uniform1f(loc, *time);
+
             let loc = gl.GetUniformLocation(program.id, CString::new("P").unwrap().as_ptr());
             gl.UniformMatrix4fv(
                 loc,

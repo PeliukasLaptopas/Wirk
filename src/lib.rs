@@ -38,6 +38,7 @@ use sdl2::event::Event;
 use crate::rendering::camera_2d::*;
 use sdl2::keyboard::Keycode;
 use crate::input::InputManager;
+use rendering::vertex::*;
 
 use wrapped2d::b2;
 use wrapped2d::user_data::NoUserData;
@@ -110,9 +111,16 @@ pub fn open_window() -> Result<(), failure::Error> {
 
     let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
     //--------------------------
+
+    // let box_rigid_body_2d_1 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
+    // let box_rigid_body_2d_2 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
+    // let box_rigid_body_2d_3 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
+    // let box_rigid_body_2d_4 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
+
     let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?;
     let sprite2 = sprite::Sprite::new(Vector2::new(25.6, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Static, &mut world, &mut res, &gl)?;
     let ground = sprite::Sprite::new(Vector2::new(0.0, 10.0), Vector2::new(60.0, 1.0), "water.png", &Static, &mut world, &mut res, &gl)?;
+    let center_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), Vector2::new(1.0, 1.0), "circle.png", &Dynamic, &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];
@@ -136,7 +144,6 @@ pub fn open_window() -> Result<(), failure::Error> {
         //          world.body(sprite.b2_body).position().y);
 
         // new_p.y -= 0.01;
-        world.body_mut(ground.b2_body).set_transform(&new_p, 0.0);
 
         start_ticks = time_subsystem.ticks();
 
@@ -182,10 +189,9 @@ pub fn open_window() -> Result<(), failure::Error> {
 
         let mouse_pos = Vector2::new(input_manager.screen_mouse_position.x, input_manager.screen_mouse_position.y);
         let mouse_pos_world = camera.convert_screen_to_world(Vector2::new(mouse_pos.x, mouse_pos.y));
-        world.body_mut(sprite2.b2_body).set_transform(&Vec2 {x: mouse_pos_world.x, y: mouse_pos_world.y}, 0.0);
+        world.body_mut(sprite2.rigid_body_2d.body).set_transform(&Vec2 {x: mouse_pos_world.x, y: mouse_pos_world.y}, 0.0);
 
-        println!("Mouse coords world: {} {}", mouse_pos_world.x, mouse_pos_world.y);
-        println!("sprite pos: {} {}", world.body(sprite1.b2_body).position().x, world.body(sprite1.b2_body).position().y);
+
 
         /*let speed: f32 = 10.0;
         if (input_manager.is_key_pressed(&Keycode::A)) {
@@ -228,14 +234,14 @@ pub fn open_window() -> Result<(), failure::Error> {
             );*/
         // }
 
+        // for spr in sprites.iter_mut() {
+        //     spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
+        // }
 
-        for spr in sprites.iter_mut() {
-            // spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
-        }
-
-        sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
-        sprite2.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
-        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch);
+        sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
+        sprite2.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
+        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
+        center_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 0.0, 0.0, 1.0).into());
 
         sprite_batch.end();
         sprite_batch.render_batch(&time, &mut camera, &mut program, &gl);

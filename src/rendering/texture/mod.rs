@@ -1,5 +1,5 @@
 pub struct Texture {
-    id: gl::types::GLuint,
-    width: i32,
-    height: i32,
-}
+    pub id: gl::types::GLuint,
+    pub width: u32,
+    pub height: u32,
+} //todo no pub?

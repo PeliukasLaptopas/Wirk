@@ -12,31 +12,44 @@ use std::io::Read;
 use image::io::Reader as ImageReader;
 use image::DynamicImage::*;
 use std::collections::BTreeMap;
+use image::GenericImageView;
+use crate::rendering::texture::Texture;
 
 pub mod errors;
 
 pub struct Resources<'a> {
     pub root_path: PathBuf, //todo not pub
-    texture_cache: BTreeMap<&'a str, gl::types::GLuint> //todo use Gltexture class (create later)
+    texture_cache: BTreeMap<&'a str, Texture> //todo use Gltexture class (create later)
 }
 
 impl Resources<'_> {
-    pub fn get_texture(&mut self, name: &'static str, gl: &gl::Gl) -> Result<gl::types::GLuint, failure::Error> {
+    pub fn get_texture(&mut self, name: &'static str, gl: &gl::Gl) -> Result<Texture, failure::Error> {
         let texture_opt = self.texture_cache.get(name);
 
         return match texture_opt {
-            Some(texture) => Ok(*texture),
+            Some(texture) => Ok(Texture {
+                id: texture.id,
+                width: texture.width,
+                height: texture.height,
+            }),
             None => {
                 let texture_id = Resources::load_png(name, self, gl)?;
 
-                self.texture_cache.insert(name.clone(), texture_id);
+                self.texture_cache.insert(name.clone(), Texture {
+                    id: texture_id.id,
+                    width: texture_id.width,
+                    height: texture_id.height
+                });
                 Ok(texture_id)
             }
         }
     }
 
-    pub fn load_png(name: &str, resources: &Resources, gl: &gl::Gl) -> Result<gl::types::GLuint, failure::Error> {
+    pub fn load_png(name: &str, resources: &Resources, gl: &gl::Gl) -> Result<Texture, failure::Error> {
         let img = ImageReader::open(resources.root_path.join(name).into_os_string().into_string().unwrap())?.decode()?; //ImageRgba8
+
+        let width = img.dimensions().0;
+        let height = img.dimensions().1;
 
         let mut bytes: Vec<u8> = Vec::new();
         img.write_to(&mut bytes, image::ImageOutputFormat::Png)?;
@@ -46,7 +59,7 @@ impl Resources<'_> {
             gl.GenTextures(1, &mut texture_id);
 
             gl.BindTexture(gl::TEXTURE_2D, texture_id);
-            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, 6, 10, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
+            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, width as i32, height as i32, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
@@ -60,7 +73,11 @@ impl Resources<'_> {
         println!("Texture: {}", texture_id);
 
         //todo clear bytes?
-        Ok(texture_id) //todo check if error
+        Ok(Texture {
+            id: texture_id,
+            width: width,
+            height: height,
+        }) //todo check if error
     }
 
     pub fn from_relative_path(rel_path: &Path) -> Result<Resources, ResourceError> {
@@ -71,7 +88,7 @@ impl Resources<'_> {
         let exe_path = exe_file_name.parent()
             .ok_or(FailedToGetExePath)?;
 
-        let new_tree: BTreeMap<&str, gl::types::GLuint> = BTreeMap::new();
+        let new_tree: BTreeMap<&str, Texture> = BTreeMap::new();
 
         Ok(Resources {
             root_path: exe_path.join(rel_path),

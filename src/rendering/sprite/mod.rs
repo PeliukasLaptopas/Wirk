@@ -28,6 +28,7 @@ use wrapped2d::dynamics::body::BodyType::Dynamic;
 pub struct Sprite {
     pub texture_id: GLuint,
     pub rigid_body_2d: RigidBody2D,
+    pub color: u2_u10_u10_u10_rev_float,
 }
 
 impl Sprite {
@@ -36,6 +37,7 @@ impl Sprite {
         texture_name: &'static str,
         body_type: &BodyType,
         collider_type: ColliderType,
+        color: u2_u10_u10_u10_rev_float,
         world: &mut World<NoUserData>,
         res: &mut Resources<'static>,
         gl: &gl::Gl,
@@ -50,6 +52,7 @@ impl Sprite {
         Ok(Sprite {
             texture_id: texture.id,
             rigid_body_2d,
+            color,
         })
     }
 
@@ -57,15 +60,9 @@ impl Sprite {
         Vector2::new(world.body(self.rigid_body_2d.body).position().x, world.body(self.rigid_body_2d.body).position().y)
     }
 
-    // pub fn update_pos(&mut self, new_position: Vector2<f32>) {
-    // self.pos = new_position;
-    // }
-
-    pub fn draw(&self, world: &mut World<NoUserData>, camera: &mut Camera2D, gl: &gl::Gl, sprite_batch: &mut SpriteBatch, color: u2_u10_u10_u10_rev_float) {
+    pub fn draw(&self, world: &mut World<NoUserData>, camera: &mut Camera2D, gl: &gl::Gl, sprite_batch: &mut SpriteBatch, angle: f32) {
         let b2_body = world.body_mut(self.rigid_body_2d.body);
         let pos = Vector2::new(b2_body.position().x, b2_body.position().y);
-
-        println!("Data: {} {}", b2_body.position().x, b2_body.position().y);
 
         let scale = match self.rigid_body_2d.collider_type {
             ColliderType::Circle(radius) => { Vector2::new(radius, radius) },
@@ -77,9 +74,9 @@ impl Sprite {
             scale,
             Vector2::new(0.0, 0.0),
             Vector2::new(1.0, 1.0),
-            color,
+            self.color,
             self.texture_id,
-            &0.0,
+            &angle,
             0.0
         );
     }

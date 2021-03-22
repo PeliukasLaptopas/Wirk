@@ -35,11 +35,11 @@ impl RigidBody2D {
 
         match shape {
             ColliderType::Circle(radius) => {
-                let circle_shape = b2::CircleShape::new_with(position, radius / 2.0);
+                let circle_shape = b2::CircleShape::new_with(Vec2{x:0.0, y:0.0}, radius / 2.0);
                 world.body_mut(body).create_fixture(&circle_shape, &mut fixture);
             },
             ColliderType::Box(scale) => {
-                let polygon_shape = b2::PolygonShape::new_box(scale.x / 2.0, scale.y / 2.0);
+                let polygon_shape = b2::PolygonShape::new_oriented_box(scale.x / 2.0, scale.y / 2.0, &Vec2 { x: 0.0 ,y: 0.0 }, 0.0);
                 world.body_mut(body).create_fixture(&polygon_shape, &mut fixture);
             },
         };

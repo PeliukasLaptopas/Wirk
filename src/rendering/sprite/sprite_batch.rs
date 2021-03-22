@@ -156,7 +156,7 @@ impl SpriteBatch {
             depth: f32,
         ) {
 
-        let angle = angle / 57.2957795;
+        // let angle = angle / 57.2957795;
 
         let half_dimensions = Vector2::new(sprite_scale.x / 2.0, sprite_scale.y / 2.0);
 

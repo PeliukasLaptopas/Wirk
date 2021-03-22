@@ -45,10 +45,12 @@ use wrapped2d::user_data::NoUserData;
 use wrapped2d::b2::{World, Vec2};
 use wrapped2d::dynamics::body::BodyType::Static;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
+use wrapped2d::dynamics::body::BodyType::Kinematic;
 
 use rand::prelude::*;
 use crate::rendering::sprite::Sprite;
 use crate::rendering::sprite::rigid_body_2d::ColliderType;
+use crate::rendering::vertex::vertex_data::u2_u10_u10_u10_rev_float;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -117,18 +119,20 @@ pub fn open_window() -> Result<(), failure::Error> {
     // let box_rigid_body_2d_2 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
     // let box_rigid_body_2d_3 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
     // let box_rigid_body_2d_4 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
+    let no_color: u2_u10_u10_u10_rev_float = (1.0, 1.0, 1.0, 1.0).into();
 
-    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), "Character.png", &Dynamic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), &mut world, &mut res, &gl)?;
-    let sprite2 = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Static, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), &mut world, &mut res, &gl)?;
-    let ground = sprite::Sprite::new(Vector2::new(0.0, 10.0), "water.png", &Static, ColliderType::Box(Vec2 { x: 60.0, y: 1.0 }), &mut world, &mut res, &gl)?;
-    let center_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), "circle.png", &Dynamic, ColliderType::Box(Vec2 { x: 1.0, y: 1.0 }), &mut world, &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), "Character.png", &Dynamic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }),  (1.0, 1.0, 1.0, 1.0).into(),&mut world, &mut res, &gl)?;
+    let mouse_sprite = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Kinematic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let ground = sprite::Sprite::new(Vector2::new(10.0, 10.0), "water.png", &Static, ColliderType::Box(Vec2 { x: 5.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let circle_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), "circle.png", &Dynamic, ColliderType::Circle(1.0), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];
-    for i in 0..1000 {
-        // sprites.push(
-        //     sprite::Sprite::new(Vector2::new(0.0 + rng.gen_range(0..29) as f32, 10.0 + rng.gen_range(0..30) as f32), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?
-        // );
+    println!("{}", rng.gen::<f64>());
+    for i in 0..500 {
+        sprites.push(
+            sprite::Sprite::new(Vector2::new(15.0+ rng.gen_range(0..20) as f32, 15.0 + rng.gen_range(0..20) as f32), "circle.png", &Dynamic, ColliderType::Circle(1.0), (rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0).into(), &mut world, &mut res, &gl)?
+        );
     }
 
 
@@ -154,7 +158,7 @@ pub fn open_window() -> Result<(), failure::Error> {
         }
 
         fps_calculator.start(&mut time_subsystem);
-        time -= 0.25;
+        time += 0.1;
 
 
         for event in event_pump.poll_iter() {
@@ -166,6 +170,10 @@ pub fn open_window() -> Result<(), failure::Error> {
                 } => {
                     viewport.update_size(w, h);
                     viewport.use_viewport(&gl);
+                }
+                Event::KeyUp { keycode: Some(Keycode::V), repeat: false, .. } => {
+                    let circle_pos = circle_sprite.get_pos(&world);
+                    world.body_mut(circle_sprite.rigid_body_2d.body).set_transform(&Vec2 {x: circle_pos.x, y: circle_pos.y + 10.0}, 0.0);
                 }
                 Event::KeyDown { keycode: Some(key_code), repeat: false, .. } => {
                     input_manager.press_key(&key_code);
@@ -190,8 +198,7 @@ pub fn open_window() -> Result<(), failure::Error> {
 
         let mouse_pos = Vector2::new(input_manager.screen_mouse_position.x, input_manager.screen_mouse_position.y);
         let mouse_pos_world = camera.convert_screen_to_world(Vector2::new(mouse_pos.x, mouse_pos.y));
-        world.body_mut(sprite2.rigid_body_2d.body).set_transform(&Vec2 {x: mouse_pos_world.x, y: mouse_pos_world.y}, 0.0);
-
+        world.body_mut(mouse_sprite.rigid_body_2d.body).set_transform(&Vec2 {x: mouse_pos_world.x, y: mouse_pos_world.y}, 0.0);
 
 
         /*let speed: f32 = 10.0;
@@ -235,14 +242,16 @@ pub fn open_window() -> Result<(), failure::Error> {
             );*/
         // }
 
-        // for spr in sprites.iter_mut() {
-        //     spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
-        // }
+        for spr in sprites.iter_mut() {
+            spr.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        }
 
-        sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
-        sprite2.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
-        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 1.0, 1.0, 1.0).into());
-        center_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, (1.0, 0.0, 0.0, 1.0).into());
+        let current_angle = world.body_mut(sprite1.rigid_body_2d.body).angle();
+
+        mouse_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        sprite1.draw(&mut world, &mut camera, &gl, &mut sprite_batch, current_angle);
+        ground.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
+        circle_sprite.draw(&mut world, &mut camera, &gl, &mut sprite_batch, 0.0);
 
         sprite_batch.end();
         sprite_batch.render_batch(&time, &mut camera, &mut program, &gl);

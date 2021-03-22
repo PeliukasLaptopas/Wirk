@@ -12,12 +12,12 @@ pub struct RigidBody2D {
 }
 
 pub enum ColliderType {
-    Circle,
-    Box
+    Circle(f32),
+    Box(Vec2)
 }
 
 impl RigidBody2D {
-    fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2, scale: f32) -> BodyHandle {
+    fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2) -> BodyHandle {
         let mut b_def = b2::BodyDef {
             body_type: *body_type,
             position,
@@ -34,12 +34,12 @@ impl RigidBody2D {
         };
 
         match shape {
-            ColliderType::Circle => {
-                let circle_shape = b2::CircleShape::new_with(position, scale);
+            ColliderType::Circle(radius) => {
+                let circle_shape = b2::CircleShape::new_with(position, radius / 2.0);
                 world.body_mut(body).create_fixture(&circle_shape, &mut fixture);
             },
-            ColliderType::Box => {
-                let polygon_shape = b2::PolygonShape::new_box(scale, scale);
+            ColliderType::Box(scale) => {
+                let polygon_shape = b2::PolygonShape::new_box(scale.x / 2.0, scale.y / 2.0);
                 world.body_mut(body).create_fixture(&polygon_shape, &mut fixture);
             },
         };
@@ -47,10 +47,18 @@ impl RigidBody2D {
         body
     }
 
-    pub fn new_circle_body(world: &mut World<NoUserData>, body_type: &BodyType, position: Vec2, scale: f32) -> RigidBody2D {
-        let body = RigidBody2D::create_physics_object(world, Circle, body_type, position, scale);
+    pub fn new_circle_body(world: &mut World<NoUserData>, body_type: &BodyType, position: Vec2, radius: f32) -> RigidBody2D {
+        let body = RigidBody2D::create_physics_object(world, Circle(radius), body_type, position);
         RigidBody2D {
-            collider_type: Circle,
+            collider_type: Circle(radius),
+            body,
+        }
+    }
+
+    pub fn new_box_body(world: &mut World<NoUserData>, body_type: &BodyType, position: Vec2, scale: Vec2) -> RigidBody2D {
+        let body = RigidBody2D::create_physics_object(world, Box(scale), body_type, position);
+        RigidBody2D {
+            collider_type: Box(scale),
             body,
         }
     }

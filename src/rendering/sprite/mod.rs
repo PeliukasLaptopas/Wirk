@@ -21,54 +21,35 @@ use nalgebra::{Vector4, Vector2};
 use wrapped2d::wrap::Wrapped;
 use crate::rendering::vertex::vertex_data::u2_u10_u10_u10_rev_float;
 use crate::rendering::texture::Texture;
-use crate::rendering::sprite::rigid_body_2d::{RigidBody2D};
+use crate::rendering::sprite::rigid_body_2d::{RigidBody2D, ColliderType};
 use wrapped2d::common::math::Vec2;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 
 pub struct Sprite {
     pub texture_id: GLuint,
     pub rigid_body_2d: RigidBody2D,
-    scale: Vector2<f32>,
 }
 
 impl Sprite {
     pub fn new(
         pos: Vector2<f32>,
-        scale: Vector2<f32>,
         texture_name: &'static str,
         body_type: &BodyType,
+        collider_type: ColliderType,
         world: &mut World<NoUserData>,
         res: &mut Resources<'static>,
         gl: &gl::Gl,
     ) -> Result<Sprite, failure::Error> {
         let texture = res.get_texture(texture_name, gl)?; //todo should get width and height from this function and store that here in sprite
 
-        // let mut b_def = b2::BodyDef {
-        //     body_type: *body_type,
-        //     position: b2::Vec2 { x: pos.x, y: pos.y },
-        //     ..b2::BodyDef::new()
-        // };
-        //
-        // let body = world.create_body(&b_def);
-        // let shape = b2::PolygonShape::new_box(scale.x / 2.0, scale.y / 2.0);
-        //
-        // let mut fixture = b2::FixtureDef {
-        //     density: 1.,
-        //     restitution: 0.2,
-        //     friction: 0.3,
-        //     ..b2::FixtureDef::new()
-        // };
-        //
-        // let f = world.body_mut(body).create_fixture(&shape, &mut fixture);
-
-        // match world.body(body).fixture(f).shape().
-
-        let rigid_body_2d = RigidBody2D::new_circle_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, scale.x);
+        let rigid_body_2d = match collider_type {
+            ColliderType::Box(scale) => RigidBody2D::new_box_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, scale),
+            ColliderType::Circle(radius) => RigidBody2D::new_circle_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, radius)
+        };
 
         Ok(Sprite {
             texture_id: texture.id,
             rigid_body_2d,
-            scale,
         })
     }
 
@@ -86,9 +67,14 @@ impl Sprite {
 
         println!("Data: {} {}", b2_body.position().x, b2_body.position().y);
 
+        let scale = match self.rigid_body_2d.collider_type {
+            ColliderType::Circle(radius) => { Vector2::new(radius, radius) },
+            ColliderType::Box(scale) => { Vector2::new(scale.x, scale.y) }
+        };
+
         sprite_batch.add_to_batch(
             pos,
-            self.scale.clone().into(),
+            scale,
             Vector2::new(0.0, 0.0),
             Vector2::new(1.0, 1.0),
             color,

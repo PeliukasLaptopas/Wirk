@@ -48,6 +48,7 @@ use wrapped2d::dynamics::body::BodyType::Dynamic;
 
 use rand::prelude::*;
 use crate::rendering::sprite::Sprite;
+use crate::rendering::sprite::rigid_body_2d::ColliderType;
 
 pub fn open_window() -> Result<(), failure::Error> {
     let sdl = sdl2::init().map_err(err_msg)?;
@@ -117,10 +118,10 @@ pub fn open_window() -> Result<(), failure::Error> {
     // let box_rigid_body_2d_3 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
     // let box_rigid_body_2d_4 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
 
-    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Dynamic, &mut world, &mut res, &gl)?;
-    let sprite2 = sprite::Sprite::new(Vector2::new(25.6, 25.0), Vector2::new(0.6, 1.0), "Character.png", &Static, &mut world, &mut res, &gl)?;
-    let ground = sprite::Sprite::new(Vector2::new(0.0, 10.0), Vector2::new(60.0, 1.0), "water.png", &Static, &mut world, &mut res, &gl)?;
-    let center_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), Vector2::new(1.0, 1.0), "circle.png", &Dynamic, &mut world, &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), "Character.png", &Dynamic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), &mut world, &mut res, &gl)?;
+    let sprite2 = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Static, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }), &mut world, &mut res, &gl)?;
+    let ground = sprite::Sprite::new(Vector2::new(0.0, 10.0), "water.png", &Static, ColliderType::Box(Vec2 { x: 60.0, y: 1.0 }), &mut world, &mut res, &gl)?;
+    let center_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), "circle.png", &Dynamic, ColliderType::Box(Vec2 { x: 1.0, y: 1.0 }), &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];

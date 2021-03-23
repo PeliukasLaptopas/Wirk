@@ -110,7 +110,7 @@ pub fn open_window() -> Result<(), failure::Error> {
     let mut input_manager = InputManager::new();
 
     //--------------------------
-    let gravity = b2::Vec2 { x: 0., y: -9.8 };
+    let mut gravity = b2::Vec2 { x: 0., y: -9.8 };
 
     let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
     //--------------------------
@@ -121,27 +121,30 @@ pub fn open_window() -> Result<(), failure::Error> {
     // let box_rigid_body_2d_4 = BoxRigidBody2D::new(&mut world, &Dynamic, Vec2 { x: 0.0, y: 0.0 }, 0.0);
     let no_color: u2_u10_u10_u10_rev_float = (1.0, 1.0, 1.0, 1.0).into();
 
-    let sprite1 = sprite::Sprite::new(Vector2::new(15.0, 25.0), "Character.png", &Dynamic, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }),  (1.0, 1.0, 1.0, 1.0).into(),&mut world, &mut res, &gl)?;
-    let mouse_sprite = sprite::Sprite::new(Vector2::new(25.6, 25.0), "Character.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 1.4 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
-    let bottom_wall = sprite::Sprite::new(Vector2::new(15.0, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 40.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
-    let top_wall = sprite::Sprite::new(Vector2::new(15.0, 36.5), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 40.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
-    let left_wall = sprite::Sprite::new(Vector2::new(-2.0, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 40.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
-    let right_wall = sprite::Sprite::new(Vector2::new(34.5, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 40.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let sprite1 = sprite::Sprite::new(Vector2::new(0.0, 0.0), "Character.png", &Static, ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }),  (1.0, 1.0, 1.0, 1.0).into(),&mut world, &mut res, &gl)?;
+    let mouse_sprite = sprite::Sprite::new(Vector2::new(25.6, 25.0), "circle.png", &Kinematic, ColliderType::Circle(5.0), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let bottom_wall = sprite::Sprite::new(Vector2::new(0.0, 0.5), "water.png", &Static, ColliderType::Box(Vec2 { x: 100.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let top_wall = sprite::Sprite::new(Vector2::new(0.0, 37.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 100.0, y: 1.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let left_wall = sprite::Sprite::new(Vector2::new(0.5, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
+    let right_wall = sprite::Sprite::new(Vector2::new(37.0, 0.0), "water.png", &Kinematic, ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
     let circle_sprite = sprite::Sprite::new(Vector2::new(15.0, 15.0), "circle.png", &Dynamic, ColliderType::Circle(1.0), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &mut res, &gl)?;
 
     let mut rng = thread_rng();
     let mut sprites: Vec<Sprite> = vec![];
-    println!("{}", rng.gen::<f64>());
-    for i in 0..1000 {
+    for i in 0..1300 {
+
+        let x = 0.0+ rng.gen_range(3.0..32.0) as f32;
+        let y = 15.0 + rng.gen_range(0.0..20.0) as f32;
+        let size = rng.gen_range(0.5..1.1) as f32;
         sprites.push(
-            sprite::Sprite::new(Vector2::new(0.0+ rng.gen_range(3..32) as f32, 15.0 + rng.gen_range(0..20) as f32), "circle.png", &Dynamic, ColliderType::Circle(1.0 -rng.gen::<f32>() +0.3), (rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0).into(), &mut world, &mut res, &gl)?
+            sprite::Sprite::new(Vector2::new(x, y), "circle.png", &Dynamic, ColliderType::Circle(size), (rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0).into(), &mut world, &mut res, &gl)?
         );
     }
 
 
     let mut new_p = Vec2 {
         x: 0.0,
-        y: 10.0
+            y: 10.0
     };
 
     'main: loop {
@@ -163,7 +166,6 @@ pub fn open_window() -> Result<(), failure::Error> {
         fps_calculator.start(&mut time_subsystem);
         time += 0.1;
 
-
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'main,
@@ -177,6 +179,18 @@ pub fn open_window() -> Result<(), failure::Error> {
                 Event::KeyUp { keycode: Some(Keycode::V), repeat: false, .. } => {
                     let circle_pos = circle_sprite.get_pos(&world);
                     world.body_mut(circle_sprite.rigid_body_2d.body).set_transform(&Vec2 {x: circle_pos.x, y: circle_pos.y + 10.0}, 0.0);
+                }
+
+                Event::KeyUp { keycode: Some(Keycode::Left), repeat: false, .. } => {
+                    gravity.x = -9.8;
+                    gravity.y = 0.0;
+                    world.set_gravity(&gravity);
+                }
+                Event::KeyUp { keycode: Some(Keycode::Right), repeat: false, .. } => {
+
+                    gravity.x = 9.8;
+                    gravity.y = 0.0;
+                    world.set_gravity(&gravity);
                 }
                 Event::KeyDown { keycode: Some(key_code), repeat: false, .. } => {
                     input_manager.press_key(&key_code);

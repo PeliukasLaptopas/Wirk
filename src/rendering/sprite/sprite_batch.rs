@@ -134,15 +134,18 @@ impl SpriteBatch {
     }
 
     /*
-    B------C
-    |      |
-    |      |
-    A------D
+    B-------C
+    |       |
+    |   X   |
+    |       |
+    A-------D
 
-    A - our pivot (start)
+    A - start
     D = vec2(A.x + width, A.y)
     B = vec2(A.x, A.y + height)
     C = vec2(A.x + width, A.y + height)
+
+    X - origin point.
     */
     pub fn add_to_batch( //todo fix from vec4's to vec2's position and width
             &mut self,
@@ -152,7 +155,7 @@ impl SpriteBatch {
             uv_scale: Vector2<f32>,
             color: u2_u10_u10_u10_rev_float,
             texture: GLuint,
-            angle: &f32, //radians
+            angle: &f32, //radians todo Circles for example don't need rotation so optimize this
             depth: f32,
         ) {
 
@@ -178,22 +181,22 @@ impl SpriteBatch {
             texture,
             depth,
             top_left: Vertex {
-                pos: (sprite_position.x + rotated_top_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_left.y).into(),
+                pos: (sprite_position.x + rotated_top_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_left.y - sprite_scale.y / 2.0).into(),
                 color,
                 uv: (uv_position.x, uv_position.y + uv_scale.y).into()
             },
             bottom_left: Vertex {
-                pos: (sprite_position.x + rotated_bottom_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_left.y).into(),
+                pos: (sprite_position.x + rotated_bottom_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_left.y - sprite_scale.y / 2.0).into(),
                 color,
                 uv: (uv_position.x, uv_position.y).into()
             },
             top_right:  Vertex {
-                pos: (sprite_position.x + rotated_top_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_right.y).into(),
+                pos: (sprite_position.x + rotated_top_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_right.y - sprite_scale.y / 2.0).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y + uv_scale.y).into()
         },
             bottom_right: Vertex {
-                pos: (sprite_position.x + rotated_bottom_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_right.y).into(),
+                pos: (sprite_position.x + rotated_bottom_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_right.y - sprite_scale.y / 2.0).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y).into()
             }

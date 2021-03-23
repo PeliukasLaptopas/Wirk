@@ -68,6 +68,10 @@ impl Sprite {
             ColliderType::Circle(radius) => { Vector2::new(radius, radius) },
             ColliderType::Box(scale) => { Vector2::new(scale.x, scale.y) }
         };
+        // let pos = match self.rigid_body_2d.collider_type {
+        //     ColliderType::Circle(radius) => { Vector2::new(b2_body.position().x, b2_body.position().y) },
+        //     ColliderType::Box(scale) => { Vector2::new(b2_body.position().x - scale.x/2.0, b2_body.position().y - scale.y /2.0) }
+        // };
 
         sprite_batch.add_to_batch(
             pos,

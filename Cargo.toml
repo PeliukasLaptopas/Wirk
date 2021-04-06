@@ -22,6 +22,7 @@ image = "0.23.14"
 time = "0.2.25"
 wrapped2d = "0.4.1"
 rand = "0.8.0"
+legion = "0.4.0"
 
 [features]
 gl_debug = ["gl/debug"]

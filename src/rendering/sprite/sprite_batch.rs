@@ -205,7 +205,7 @@ impl SpriteBatch {
         self.glyphs.push(new_glyph);
     }
 
-    pub fn render_batch(&mut self, time: &f32, camera: &mut Camera2D, program: &mut Program, gl: &Gl) {
+    pub fn render_batch(&mut self, camera: &mut Camera2D, program: &mut Program, gl: &Gl) {
         program.use_program();
         self.vao.bind();
 
@@ -214,9 +214,6 @@ impl SpriteBatch {
 
             let loc = gl.GetUniformLocation(program.id, CString::new("mySampler").unwrap().as_ptr());
             gl.Uniform1i(loc, 0);
-
-            let loc = gl.GetUniformLocation(program.id, CString::new("time").unwrap().as_ptr());
-            gl.Uniform1f(loc, *time);
 
             let loc = gl.GetUniformLocation(program.id, CString::new("P").unwrap().as_ptr());
             gl.UniformMatrix4fv(

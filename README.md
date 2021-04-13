@@ -26,7 +26,7 @@ fps calculator
 fps limiter
 
 Ball game:
-```use RustEngineLibrary::*;
+use RustEngineLibrary::*;
 use RustEngineLibrary::engine_error::failure_to_string;
 use wrapped2d::b2::World;
 use wrapped2d::b2::Vec2;
@@ -47,6 +47,7 @@ use legion::*;
 use crate::ecs::Ecs;
 use legion::systems::SystemFn;
 use rand::{thread_rng, Rng};
+use crate::rendering::ui::text::{Text};
 
 fn main() -> Result<(), failure::Error> {
     #[system(simple)]
@@ -67,7 +68,7 @@ fn main() -> Result<(), failure::Error> {
         world: ecs_world
     };
 
-    let mut maybe_engine: Result<Engine, failure::Error> = Engine::new(1200, 1200, Vec2 {x: 0.0, y: -5.8 }, ecs);
+    let mut maybe_engine: Result<Engine, failure::Error> = Engine::new(1200, 1200, Vec2 {x: 0.0, y: -4.8 }, ecs);
 
     match maybe_engine {
         Ok(mut engine) => {
@@ -75,20 +76,30 @@ fn main() -> Result<(), failure::Error> {
             let character_texture = engine.resources.get_texture("Character.png", &engine.gl)?;
             let circle_texture = engine.resources.get_texture("circle.png", &engine.gl)?;
 
+            let text_texture = engine.resources.generate_from_text("Game".to_string(), &engine.gl)?;
+
             let wall: Sprite = engine.new_sprite(
-                Vector2::new(20.0, 5.0),
+                Vector2::new(20.0, 0.0),
                 &Kinematic,
                 ColliderType::Box(Vec2 { x: 50.0, y: 1.0 }),
                 (1.0, 1.0, 1.0, 1.0).into(),
                 &wall_texture
             )?;
 
-            engine.ecs.world.push((wall,));
+            let text: Text = engine.new_text(
+                Vector2::new(10.0, 25.0),
+                Vector2::new(5.0, 5.0),
+                (1.0, 1.0, 1.0, 1.0).into(),
+                &text_texture
+            );
+
+            engine.ecs.world.push((wall, ));
+            engine.ecs.world.push((text, ));
 
             let character: Sprite = engine.new_sprite(
                 Vector2::new(20.0, 20.0),
                 &Dynamic,
-                ColliderType::Box(Vec2 { x: 0.6, y: 1.0 }),
+                ColliderType::Box(Vec2 { x: 1.6, y: 2.0 }),
                 (1.0, 1.0, 1.0, 1.0).into(),
                 &character_texture
             )?;
@@ -97,12 +108,20 @@ fn main() -> Result<(), failure::Error> {
 
             let mut rng = thread_rng();
 
-            for i in 0..500 {
+            for i in 0..1000 {
+                let x = 0.0 + rng.gen_range(10.0..25.0) as f32;
+                let y = 15.0 + rng.gen_range(0.0..150.0) as f32;
+                let size = 0.0 + rng.gen_range(0.3..1.0) as f32;
+
+                let colorr = 0.0 + rng.gen_range(0.0..1.0) as f32;
+                let colorg = 0.0 + rng.gen_range(0.0..1.0) as f32;
+                let colorb = 0.0 + rng.gen_range(0.0..1.0) as f32;
+
                 let sprite: Sprite = engine.new_sprite(
-                    Vector2::new(0.0 + rng.gen_range(10..25) as f32, 15.0 + rng.gen_range(0..50) as f32),
+                    Vector2::new(x, y),
                     &Dynamic,
-                    ColliderType::Circle(1.0),
-                    (0.3, 0.6, 0.7, 1.0).into(),
+                    ColliderType::Circle(size),
+                    (colorr, colorg, colorb, 1.0).into(),
                     &circle_texture
                 )?;
 
@@ -116,4 +135,5 @@ fn main() -> Result<(), failure::Error> {
 
     Ok(())
 }
+
 ```

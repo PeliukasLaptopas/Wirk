@@ -14,6 +14,7 @@ use image::DynamicImage::*;
 use std::collections::BTreeMap;
 use image::GenericImageView;
 use crate::rendering::texture::Texture;
+use sdl2::pixels::Color;
 
 pub mod errors;
 
@@ -25,7 +26,6 @@ pub struct Resources<'a> {
 impl Resources<'_> {
     pub fn get_texture(&mut self, name: &'static str, gl: &gl::Gl) -> Result<Texture, failure::Error> {
         let texture_opt = self.texture_cache.get(name);
-
 
         return match texture_opt {
             Some(texture) => Ok(Texture {
@@ -57,11 +57,12 @@ impl Resources<'_> {
         img.write_to(&mut bytes, image::ImageOutputFormat::Png)?;
 
         let mut texture_id: gl::types::GLuint = 0;
+
         unsafe {
             gl.GenTextures(1, &mut texture_id);
 
             gl.BindTexture(gl::TEXTURE_2D, texture_id);
-            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, width as i32, height as i32, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.into_bytes().as_ptr() as *const std::os::raw::c_void);
+            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, width as i32, height as i32, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, img.as_bytes().as_ptr() as *const std::os::raw::c_void);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
@@ -77,6 +78,45 @@ impl Resources<'_> {
             id: texture_id,
             width: width,
             height: height,
+        }) //todo check if error
+    }
+
+    pub fn generate_from_text(&self, text: String, gl: &gl::Gl) -> Result<Texture, failure::Error> {
+        let mut texture_id: gl::types::GLuint = 0;
+
+        let ttf_context = sdl2::ttf::init().map_err(|e| format_err!("{:?}", e))?;
+
+        // Load a font
+        let mut font = ttf_context.load_font(self.root_path.join("font.otf"), 128).map_err(|e| format_err!("{:?}", e))?;
+
+        // render a surface, and convert it to a texture bound to the canvas
+        let surface = font
+            .render(text.as_str())
+            .blended(Color::RGBA(35, 121, 100, 255))
+            .map_err(|e| format_err!("{:?}", e))?;
+
+        unsafe {
+            let pixels = (*surface.raw()).pixels as *const std::os::raw::c_void;
+
+            gl.GenTextures(1, &mut texture_id);
+
+            gl.BindTexture(gl::TEXTURE_2D, texture_id);
+            gl.TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, surface.width() as i32, surface.height() as i32, 0, gl::RGBA as u32, gl::UNSIGNED_BYTE, pixels);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+
+            gl.GenerateMipmap(gl::TEXTURE_2D);
+
+            gl.BindTexture(gl::TEXTURE_2D, 0);
+        }
+
+        //todo clear bytes?
+        Ok(Texture {
+            id: texture_id,
+            width: surface.width(),
+            height: surface.height(),
         }) //todo check if error
     }
 

@@ -66,7 +66,7 @@ impl RigidBody2D {
         let mut fixture = b2::FixtureDef {
             density: 0.5,
             restitution: 0.6,
-            friction: 0.3,
+            friction: 0.9,
             ..b2::FixtureDef::new()
         };
 

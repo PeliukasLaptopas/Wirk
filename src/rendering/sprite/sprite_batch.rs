@@ -10,8 +10,7 @@ use crate::rendering::shader::program::Program;
 use crate::rendering::camera_2d::Camera2D;
 use nalgebra_glm::{cos, sin};
 
-
-struct Glyph {
+struct SpriteGlyph {
     texture: GLuint,
     depth: f32,
 
@@ -30,11 +29,11 @@ struct RenderBatch {
 pub struct SpriteBatch {
     vbo: buffer::ArrayBuffer,
     vao: buffer::VertexArray,
-    glyphs: Vec<Glyph>,
+    glyphs: Vec<SpriteGlyph>,
     render_batches: Vec<RenderBatch>,
 }
 
-impl Glyph {
+impl SpriteGlyph {
     pub fn rotate_point(pos: Vector2<f32>, angle: &f32) -> Vector2<f32> {
         Vector2::new(
             pos.x * angle.cos() - pos.y * angle.sin(),
@@ -170,14 +169,14 @@ impl SpriteBatch {
         let top_right_at_origin    = Vector2::new(half_dimensions.x, half_dimensions.y);
 
         //Rotate the points
-        let rotated_top_left     = Glyph::rotate_point(top_left_at_origin, &angle) + half_dimensions;
-        let rotated_bottom_left  = Glyph::rotate_point(bottom_left_at_origin, &angle) + half_dimensions;
-        let rotated_bottom_right = Glyph::rotate_point(bottom_right_at_origin, &angle) + half_dimensions;
-        let rotated_top_right    = Glyph::rotate_point(top_right_at_origin, &angle) + half_dimensions;
+        let rotated_top_left     = SpriteGlyph::rotate_point(top_left_at_origin, &angle) + half_dimensions;
+        let rotated_bottom_left  = SpriteGlyph::rotate_point(bottom_left_at_origin, &angle) + half_dimensions;
+        let rotated_bottom_right = SpriteGlyph::rotate_point(bottom_right_at_origin, &angle) + half_dimensions;
+        let rotated_top_right    = SpriteGlyph::rotate_point(top_right_at_origin, &angle) + half_dimensions;
 
         //todo Subtracting (<..> - sprite_scale.x / 2.0) is needed because of some WEIRD Box2d box collider offsets?????? (pos: (sprite_position.x + rotated_top_left.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_left.y).into(), <..>)
         //todo Because of this, the pivot (origin) is literally at bottom middle. Fix box2d collider not this rendering!
-        let new_glyph = Glyph {
+        let new_glyph = SpriteGlyph {
             texture,
             depth,
             top_left: Vertex {
@@ -194,7 +193,7 @@ impl SpriteBatch {
                 pos: (sprite_position.x + rotated_top_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_top_right.y - sprite_scale.y / 2.0).into(),
                 color,
                 uv: (uv_position.x + uv_scale.x, uv_position.y + uv_scale.y).into()
-        },
+            },
             bottom_right: Vertex {
                 pos: (sprite_position.x + rotated_bottom_right.x - sprite_scale.x / 2.0, sprite_position.y + rotated_bottom_right.y - sprite_scale.y / 2.0).into(),
                 color,

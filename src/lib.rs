@@ -63,6 +63,8 @@ use crate::ecs::Ecs;
 use crate::rendering::texture::Texture;
 use sdl2::pixels::Color;
 use sdl2::render::TextureQuery;
+use crate::rendering::ui::text::{Text};
+use crate::rendering::ui::ui_batch::UIBatch;
 // use crate::rendering::ui::text::get_centered_rect;
 // use sdl2::ttf::Sdl2TtfContext;
 // use sdl2::surface::SurfaceRef;
@@ -79,6 +81,7 @@ pub struct Engine<'a> {
     pub ecs: Ecs,
     pub camera: Camera2D,
     pub sprite_batch: SpriteBatch,
+    pub ui_batch: SpriteBatch,
     pub program: Program,
     pub resources: Resources<'a>,
     pub physics_world: World<NoUserData>,
@@ -124,6 +127,7 @@ impl<'a> Engine<'_> {
         let mut program = Program::from_res(&gl, &mut resources, "shaders/triangle")?;
 
         let mut sprite_batch = SpriteBatch::new(&gl);
+        let mut ui_batch = SpriteBatch::new(&gl);
 
         let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
 
@@ -139,6 +143,7 @@ impl<'a> Engine<'_> {
             ecs,
             camera,
             sprite_batch,
+            ui_batch,
             program,
             resources,
             physics_world: world
@@ -155,6 +160,16 @@ impl<'a> Engine<'_> {
         Sprite::new(pos, body_type, collider_type, color, &mut self.physics_world, texture)
     }
 
+    pub fn new_text(&mut self,
+                    // text: String,
+                    pos: Vector2<f32>,
+                    scale: Vector2<f32>,
+                    color: u2_u10_u10_u10_rev_float,
+                    texture: &Texture
+    ) -> Text {
+        Text::new(pos, scale, color, texture)
+    }
+
     pub fn update_camera(&mut self) {
         self.camera.update();
     }
@@ -167,8 +182,21 @@ impl<'a> Engine<'_> {
             let current_angle = self.physics_world.body_mut(sprite.rigid_body_2d.body).angle();
             sprite.draw(&mut self.physics_world, &mut self.sprite_batch, current_angle);
         }
+
         self.sprite_batch.end();
         self.sprite_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
+    }
+
+    pub fn render_ui(&mut self) {
+        let mut query = <(&Text)>::query();
+
+        self.ui_batch.begin();
+        for (text) in query.iter_mut(&mut self.ecs.world) {
+            text.draw(&mut self.ui_batch, 0.0);
+        }
+
+        self.ui_batch.end();
+        self.ui_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
     }
 
     pub fn run(&mut self) {
@@ -189,6 +217,7 @@ impl<'a> Engine<'_> {
             self.update_camera();
 
             self.render_sprites();
+            self.render_ui();
 
             self.window.gl_swap_window();
         }

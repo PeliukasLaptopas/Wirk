@@ -43,7 +43,7 @@ use rendering::vertex::*;
 
 use wrapped2d::b2;
 use wrapped2d::user_data::NoUserData;
-use wrapped2d::b2::{World, Vec2};
+use wrapped2d::b2::{World, Vec2, BodyType};
 use wrapped2d::dynamics::body::BodyType::Static;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 use wrapped2d::dynamics::body::BodyType::Kinematic;
@@ -55,12 +55,19 @@ use crate::rendering::vertex::vertex_data::u2_u10_u10_u10_rev_float;
 use sdl2::video::{Window, GLContext};
 use gl::Gl;
 use sdl2::Sdl;
+use sdl2::rect::Rect;
 
 use legion::*;
 use legion::systems::Builder;
 use crate::ecs::Ecs;
+use crate::rendering::texture::Texture;
+use sdl2::pixels::Color;
+use sdl2::render::TextureQuery;
+// use crate::rendering::ui::text::get_centered_rect;
+// use sdl2::ttf::Sdl2TtfContext;
+// use sdl2::surface::SurfaceRef;
 
-pub struct Engine {
+pub struct Engine<'a> {
     pub opened: bool,
     pub input_manager: InputManager,
     pub window: Window,
@@ -69,11 +76,16 @@ pub struct Engine {
     pub sdl: Sdl,
     pub gl_context: GLContext, //if this isnt stored here it dies after create_window function and nothing will be drawn after the function is done
     pub gl: Rc<Gl>,
-    pub ecs: Ecs
+    pub ecs: Ecs,
+    pub camera: Camera2D,
+    pub sprite_batch: SpriteBatch,
+    pub program: Program,
+    pub resources: Resources<'a>,
+    pub physics_world: World<NoUserData>,
 }
 
-impl Engine {
-    pub fn new(window_width: u32, window_height: u32, ecs: Ecs) -> Result<Engine, failure::Error> {
+impl<'a> Engine<'_> {
+    pub fn new(window_width: u32, window_height: u32, gravity: b2::Vec2, ecs: Ecs) -> Result<Engine<'a>, failure::Error> {
         let sdl = sdl2::init().map_err(err_msg)?;
         let video_subsystem = sdl.video().map_err(err_msg)?;
         let mut time_subsystem = sdl.timer().unwrap();
@@ -104,29 +116,80 @@ impl Engine {
 
         let mut input_manager = InputManager::new(&sdl)?;
 
+        let mut camera_pos = Vector2::new(0.0, 0.0);
+        let camera_scale = 32.0; //32 pixels per meter
+        let mut camera = Camera2D::new(camera_pos, camera_scale, window_width, window_height);
+
+        let mut resources = Resources::from_relative_path(Path::new("assets")).unwrap();
+        let mut program = Program::from_res(&gl, &mut resources, "shaders/triangle")?;
+
+        let mut sprite_batch = SpriteBatch::new(&gl);
+
+        let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
+
         Ok(Engine {
             opened: true,
             input_manager,
-            window,
+            window: window,
             viewport,
             color_buffer,
             sdl,
             gl_context,
             gl,
-            ecs
+            ecs,
+            camera,
+            sprite_batch,
+            program,
+            resources,
+            physics_world: world
         })
     }
 
+    pub fn new_sprite(&mut self,
+                      pos: Vector2<f32>,
+                      body_type: &BodyType,
+                      collider_type: ColliderType,
+                      color: u2_u10_u10_u10_rev_float,
+                      texture: &Texture
+    ) -> Result<Sprite, failure::Error> {
+        Sprite::new(pos, body_type, collider_type, color, &mut self.physics_world, texture)
+    }
+
+    pub fn update_camera(&mut self) {
+        self.camera.update();
+    }
+
+    pub fn render_sprites(&mut self) {
+        let mut query = <(&Sprite)>::query();
+
+        self.sprite_batch.begin();
+        for (sprite) in query.iter_mut(&mut self.ecs.world) {
+            let current_angle = self.physics_world.body_mut(sprite.rigid_body_2d.body).angle();
+            sprite.draw(&mut self.physics_world, &mut self.sprite_batch, current_angle);
+        }
+        self.sprite_batch.end();
+        self.sprite_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
+    }
+
     pub fn run(&mut self) {
-        'main: loop {
-            self.input_manager.update();
-            if (!self.input_manager.window_opened) {
-                break 'main;
+        while (self.input_manager.window_opened) {
+            self.physics_world.step(1.0 / 60.0, 6, 2);
+
+            unsafe {
+                self.gl.Enable(gl::BLEND);
+                self.gl.BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             }
+
+            self.input_manager.update();
 
             self.ecs.run();
 
             self.color_buffer.clear(&self.gl);
+
+            self.update_camera();
+
+            self.render_sprites();
+
             self.window.gl_swap_window();
         }
     }

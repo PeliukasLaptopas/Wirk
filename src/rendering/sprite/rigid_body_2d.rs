@@ -64,9 +64,9 @@ impl RigidBody2D {
     fn create_physics_object(world: &mut World<NoUserData>, shape: ColliderType, body_type: &BodyType, position: Vec2/*, angle: f32*/) -> BodyHandle {
 
         let mut fixture = b2::FixtureDef {
-            // density: 0.5,
-            // restitution: 0.6,
-            // friction: 0.3,
+            density: 0.5,
+            restitution: 0.6,
+            friction: 0.3,
             ..b2::FixtureDef::new()
         };
 

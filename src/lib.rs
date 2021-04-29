@@ -38,7 +38,7 @@ use rendering::sprite::sprite_batch::*;
 use sdl2::event::Event;
 use crate::rendering::camera_2d::*;
 use sdl2::keyboard::Keycode;
-use crate::input::InputManager;
+use crate::input::{SdlInputManager, Input};
 use rendering::vertex::*;
 
 use wrapped2d::b2;
@@ -69,9 +69,13 @@ use crate::rendering::ui::ui_batch::UIBatch;
 // use sdl2::ttf::Sdl2TtfContext;
 // use sdl2::surface::SurfaceRef;
 
+use std::fs::File;
+use std::io::BufReader;
+use rodio::{Decoder, OutputStream, source::Source};
+
 pub struct Engine<'a> {
     pub opened: bool,
-    pub input_manager: InputManager,
+    pub input_manager: SdlInputManager,
     pub window: Window,
     pub viewport: Viewport,
     pub color_buffer: ColorBuffer,
@@ -117,7 +121,7 @@ impl<'a> Engine<'_> {
         viewport.use_viewport(&gl);
         color_buffer.clear_color(&gl);
 
-        let mut input_manager = InputManager::new(&sdl)?;
+        let mut input_manager = SdlInputManager::new(&sdl)?;
 
         let mut camera_pos = Vector2::new(0.0, 0.0);
         let camera_scale = 32.0; //32 pixels per meter
@@ -157,7 +161,7 @@ impl<'a> Engine<'_> {
                       color: u2_u10_u10_u10_rev_float,
                       texture: &Texture
     ) -> Result<Sprite, failure::Error> {
-        Sprite::new(pos, body_type, collider_type, color, &mut self.physics_world, texture)
+            Sprite::new(pos, body_type, collider_type, color, &mut self.physics_world, texture)
     }
 
     pub fn new_text(&mut self,
@@ -199,7 +203,24 @@ impl<'a> Engine<'_> {
         self.ui_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
     }
 
+    pub fn update_input(&mut self) {
+        let mut query = <(&mut Input)>::query();
+
+        for (input) in query.iter_mut(&mut self.ecs.world) {
+            self.input_manager.update(input, &self.camera);
+        }
+    }
+
+    pub fn update_input_resources(&mut self) {
+        let mut input = self.ecs.resources.get_mut::<Input>().unwrap();
+        self.input_manager.update(&mut input, &self.camera)
+
+            // .map(|mut input| self.input_manager.update(&mut input, &self.camera));
+    }
+
     pub fn run(&mut self) {
+        // self.ecs.world.push((Input::new(), ));
+
         while (self.input_manager.window_opened) {
             self.physics_world.step(1.0 / 60.0, 6, 2);
 
@@ -208,7 +229,9 @@ impl<'a> Engine<'_> {
                 self.gl.BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             }
 
-            self.input_manager.update();
+            // self.input_manager.update();
+            // self.update_input();
+            self.update_input_resources();
 
             self.ecs.run();
 

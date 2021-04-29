@@ -23,6 +23,7 @@ wrapped2d = "0.4.1"
 rand = "0.8.0"
 legion = "0.4.0"
 sdl2 = { version = "0.31.0", default-features = false, features = ["ttf"] }
+rodio = "0.13.1"
 
 [features]
 gl_debug = ["gl/debug"]

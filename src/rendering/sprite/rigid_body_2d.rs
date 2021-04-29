@@ -120,6 +120,9 @@ impl RigidBody2D {
 
     pub fn new_box_body(world: &mut World<NoUserData>, body_type: &BodyType, position: Vec2, scale: Vec2) -> RigidBody2D {
         let body = RigidBody2D::create_physics_object(world, Box(scale), body_type, position);
+
+        // body.set_linear_velocity();
+
         RigidBody2D {
             collider_type: Box(scale),
             body,

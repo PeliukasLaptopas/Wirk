@@ -49,18 +49,58 @@ use crate::ecs::Ecs;
 use legion::systems::SystemFn;
 use rand::{thread_rng, Rng};
 use crate::rendering::ui::text::{Text};
+use sdl2::keyboard::Keycode;
+use crate::input::{Input};
+use crate::rendering::sprite::rigid_body_2d::{RigidBody2D};
+use std::num::NonZeroU64;
+
+struct Time(i32);
 
 fn main() -> Result<(), failure::Error> {
-    #[system(simple)]
-    fn update_positions() {
-        // println!("DEEZ System");
+    #[system(for_each)]
+    fn update_positions(sprite: &Sprite) {
+        let abc = sprite.texture_id;
     }
 
+    #[system(for_each)]
+    fn get_keys(input: &mut Input) {
+        if (input.is_key_pressed(&Keycode::Space)) {
+            println!("SPACE");
+        }
+
+        // println!("{};{}", input.world_mouse_position.x, input.world_mouse_position.y);
+    }
+
+    // a system fn which loops through Position and Velocity components, and reads the Time shared resource
+    // the #[system] macro generates a fn called update_positions_system() which will construct our system
+    #[system(for_each)]
+    fn foo(sprite: &Sprite, entity: &Entity, #[resource] input: &mut Input, #[resource] manager: &mut Manager) {
+        // println!("{};{}", input.world_mouse_position.x, input.world_mouse_position.y);
+        // manager.entities_to_remove.push(entity);
+
+        println!("DEEZ");
+    }
+
+    // run our schedule (you should do this each update)
+    // schedule.execute(&mut world, &mut resources);
+
     let mut ecs_resources = legion::Resources::default();
+    ecs_resources.insert(Input::new());
+    ecs_resources.insert(Manager::new());
+    // ecs_resources.insert(Time(100));
+
+
+    // self.resources
+    //     .get_mut::<Delta>()
+    //     .map(|mut d| d.0 = delta as f32);
+
+
     let ecs_world = legion::World::default();
 
     let mut schedule = Schedule::builder()
         .add_system(update_positions_system())
+        .add_system(get_keys_system())
+        .add_system(foo_system())
         .build();
 
     let ecs = Ecs {
@@ -77,9 +117,9 @@ fn main() -> Result<(), failure::Error> {
             let character_texture = engine.resources.get_texture("Character.png", &engine.gl)?;
             let circle_texture = engine.resources.get_texture("circle.png", &engine.gl)?;
 
-            let text_texture = engine.resources.generate_from_text("Game".to_string(), &engine.gl)?;
+            let text_texture = engine.resources.generate_from_text("Laba diena pasauli".to_string(), &engine.gl)?;
 
-            let wall: Sprite = engine.new_sprite(
+            let floor: Sprite = engine.new_sprite(
                 Vector2::new(20.0, 0.0),
                 &Kinematic,
                 ColliderType::Box(Vec2 { x: 50.0, y: 1.0 }),
@@ -87,14 +127,32 @@ fn main() -> Result<(), failure::Error> {
                 &wall_texture
             )?;
 
-            let text: Text = engine.new_text(
-                Vector2::new(10.0, 25.0),
-                Vector2::new(5.0, 5.0),
+            let right_wall: Sprite = engine.new_sprite(
+                Vector2::new(37.5, 0.0),
+                &Kinematic,
+                ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }),
                 (1.0, 1.0, 1.0, 1.0).into(),
+                &wall_texture
+            )?;
+
+            let left_wall: Sprite = engine.new_sprite(
+                Vector2::new(0.0, 0.0),
+                &Kinematic,
+                ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }),
+                (1.0, 1.0, 1.0, 1.0).into(),
+                &wall_texture
+            )?;
+
+            let text: Text = engine.new_text(
+                Vector2::new(17.0, 25.0),
+                Vector2::new(25.0, 5.0),
+                (0.3, 0.5, 0.7, 1.0).into(),
                 &text_texture
             );
 
-            engine.ecs.world.push((wall, ));
+            engine.ecs.world.push((floor, ));
+            engine.ecs.world.push((left_wall, ));
+            engine.ecs.world.push((right_wall, ));
             engine.ecs.world.push((text, ));
 
             let character: Sprite = engine.new_sprite(
@@ -105,13 +163,31 @@ fn main() -> Result<(), failure::Error> {
                 &character_texture
             )?;
 
+            let character1: Sprite = engine.new_sprite(
+                Vector2::new(20.0, 20.0),
+                &Dynamic,
+                ColliderType::Box(Vec2 { x: 1.6, y: 2.0 }),
+                (1.0, 1.0, 1.0, 1.0).into(),
+                &character_texture
+            )?;
+
+            let character2: Sprite = engine.new_sprite(
+                Vector2::new(20.0, 20.0),
+                &Dynamic,
+                ColliderType::Box(Vec2 { x: 1.6, y: 2.0 }),
+                (1.0, 1.0, 1.0, 1.0).into(),
+                &character_texture
+            )?;
+
             engine.ecs.world.push((character,));
+            engine.ecs.world.push((character1,));
+            engine.ecs.world.push((character2,));
 
             let mut rng = thread_rng();
 
-            for i in 0..1000 {
+            for i in 0..10/*1300*/ {
                 let x = 0.0 + rng.gen_range(10.0..25.0) as f32;
-                let y = 15.0 + rng.gen_range(0.0..150.0) as f32;
+                let y = 15.0 + rng.gen_range(0.0..600.0) as f32;
                 let size = 0.0 + rng.gen_range(0.3..1.0) as f32;
 
                 let colorr = 0.0 + rng.gen_range(0.0..1.0) as f32;
@@ -136,5 +212,6 @@ fn main() -> Result<(), failure::Error> {
 
     Ok(())
 }
+
 
 ```

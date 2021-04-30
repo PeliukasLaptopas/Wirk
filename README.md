@@ -53,6 +53,7 @@ use sdl2::keyboard::Keycode;
 use crate::input::{Input};
 use crate::rendering::sprite::rigid_body_2d::{RigidBody2D};
 use std::num::NonZeroU64;
+use legion::systems::CommandBuffer;
 
 struct Time(i32);
 
@@ -71,14 +72,19 @@ fn main() -> Result<(), failure::Error> {
         // println!("{};{}", input.world_mouse_position.x, input.world_mouse_position.y);
     }
 
+
+
     // a system fn which loops through Position and Velocity components, and reads the Time shared resource
     // the #[system] macro generates a fn called update_positions_system() which will construct our system
     #[system(for_each)]
-    fn foo(sprite: &Sprite, entity: &Entity, #[resource] input: &mut Input, #[resource] manager: &mut Manager) {
+    fn foo(commands: &mut CommandBuffer, sprite: &Sprite, entity: &Entity, #[resource] input: &mut Input) {
         // println!("{};{}", input.world_mouse_position.x, input.world_mouse_position.y);
         // manager.entities_to_remove.push(entity);
 
-        println!("DEEZ");
+
+        if (input.is_key_pressed(&Keycode::Space)) {
+            commands.remove(*entity);
+        }
     }
 
     // run our schedule (you should do this each update)
@@ -86,7 +92,6 @@ fn main() -> Result<(), failure::Error> {
 
     let mut ecs_resources = legion::Resources::default();
     ecs_resources.insert(Input::new());
-    ecs_resources.insert(Manager::new());
     // ecs_resources.insert(Time(100));
 
 
@@ -212,6 +217,7 @@ fn main() -> Result<(), failure::Error> {
 
     Ok(())
 }
+
 
 
 ```

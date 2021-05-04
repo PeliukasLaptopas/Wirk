@@ -4,6 +4,8 @@ pub mod resources;
 pub mod rendering;
 pub mod input;
 pub mod ecs;
+pub mod sound;
+pub mod tests;
 
 #[macro_use] extern crate gl_derive;
 #[macro_use] extern crate failure;
@@ -73,6 +75,11 @@ use std::fs::File;
 use std::io::BufReader;
 use rodio::{Decoder, OutputStream, source::Source};
 
+use sdl2::audio::{AudioCVT, AudioCallback, AudioSpecDesired, AudioSpecWAV, AudioDevice};
+use std::borrow::Cow;
+use std::path::{PathBuf};
+use sdl2::{AudioSubsystem};
+
 pub struct Engine<'a> {
     pub opened: bool,
     pub input_manager: SdlInputManager,
@@ -104,7 +111,7 @@ impl<'a> Engine<'_> {
         gl_attr.set_context_version(4, 5);
 
         let window = video_subsystem
-            .window("Game", window_width, window_height)
+            .window("Alesis Zaidimas", window_width, window_height)
             .opengl()
             .resizable()
             .build()
@@ -128,6 +135,7 @@ impl<'a> Engine<'_> {
         let mut camera = Camera2D::new(camera_pos, camera_scale, window_width, window_height);
 
         let mut resources = Resources::from_relative_path(Path::new("assets")).unwrap();
+
         let mut program = Program::from_res(&gl, &mut resources, "shaders/triangle")?;
 
         let mut sprite_batch = SpriteBatch::new(&gl);
@@ -196,7 +204,7 @@ impl<'a> Engine<'_> {
 
         self.ui_batch.begin();
         for (text) in query.iter_mut(&mut self.ecs.world) {
-            text.draw(&mut self.ui_batch, 0.0);
+            text.draw(&mut self.ui_batch, 0.1);
         }
 
         self.ui_batch.end();
@@ -211,6 +219,14 @@ impl<'a> Engine<'_> {
         }
     }
 
+    // pub fn update_manager_resources(&mut self) {
+    //     let mut manager = self.ecs.resources.get_mut::<Manager>().unwrap();
+    //     for i in 0..(manager.entities_to_remove.len()) {
+    //         self.ecs.world.remove(manager.entities_to_remove[i]);
+    //         manager.entities_to_remove.remove(i);
+    //     }
+    // }
+
     pub fn update_input_resources(&mut self) {
         let mut input = self.ecs.resources.get_mut::<Input>().unwrap();
         self.input_manager.update(&mut input, &self.camera)
@@ -219,7 +235,7 @@ impl<'a> Engine<'_> {
     }
 
     pub fn run(&mut self) {
-        // self.ecs.world.push((Input::new(), ));
+        // self.ecs.world.push((, ));
 
         while (self.input_manager.window_opened) {
             self.physics_world.step(1.0 / 60.0, 6, 2);
@@ -232,6 +248,7 @@ impl<'a> Engine<'_> {
             // self.input_manager.update();
             // self.update_input();
             self.update_input_resources();
+            // self.update_manager_resources();
 
             self.ecs.run();
 

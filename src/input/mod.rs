@@ -8,6 +8,7 @@ use crate::rendering::camera_2d::Camera2D;
 
 pub struct Input {
     key_map: HashMap<Keycode, bool>,
+    once_key_map: HashMap<Keycode, bool>,
     pub screen_mouse_position: Vector2<i32>,
     pub world_mouse_position: Vector2<f32>
 }
@@ -16,6 +17,7 @@ impl Input {
     pub fn new() -> Input {
         Input {
             key_map: HashMap::new(),
+            once_key_map: HashMap::new(),
             screen_mouse_position: Vector2::new(0, 0),
             world_mouse_position: Vector2::new(0.0, 0.0)
         }

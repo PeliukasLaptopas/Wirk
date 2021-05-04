@@ -10,7 +10,7 @@ use crate::rendering::shader::program::Program;
 use crate::rendering::camera_2d::Camera2D;
 use nalgebra_glm::{cos, sin};
 
-struct SpriteGlyph {
+pub struct SpriteGlyph {
     texture: GLuint,
     depth: f32,
 
@@ -20,17 +20,17 @@ struct SpriteGlyph {
     bottom_right: Vertex,
 }
 
-struct RenderBatch {
+pub struct RenderBatch {
     offset: GLuint,
     vertices_count: GLuint,
     texture: GLuint,
 }
 
 pub struct SpriteBatch {
-    vbo: buffer::ArrayBuffer,
-    vao: buffer::VertexArray,
-    glyphs: Vec<SpriteGlyph>,
-    render_batches: Vec<RenderBatch>,
+    pub vbo: buffer::ArrayBuffer,
+    pub vao: buffer::VertexArray,
+    pub glyphs: Vec<SpriteGlyph>,
+    pub render_batches: Vec<RenderBatch>,
 }
 
 impl SpriteGlyph {

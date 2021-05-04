@@ -16,31 +16,5 @@ impl<'a> TextureCache<'a> {
         TextureCache {
             textures: new_tree,
         }
-    }/*
-
-    pub fn get_texture(&mut self, name: &'a str, resources: &Resources, gl: &gl::Gl) -> Result<gl::types::GLuint, failure::Error> { //todo make to be result later
-        let texture_opt = self.textures.get(name);
-
-        println!("TESTING {}", self.textures.is_empty());
-        for (movie, review) in &self.textures {
-            println!("{}: \"{}\"", movie, review);
-        }
-
-        match texture_opt {
-            Some(texture) => {
-                println!("BUVO JAU");
-                return Ok(*texture)
-            },
-
-            None =>  {
-                println!("NAUJAS TEXTURE");
-
-                let texture_id = Resources::load_png(name, resources, gl)?;
-
-
-                self.textures.insert(name.clone(), texture_id);
-                return Ok(texture_id);
-            }
-        }
-    }*/
+    }
 }

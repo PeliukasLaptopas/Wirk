@@ -14,7 +14,7 @@ use image::DynamicImage::*;
 use gl::types::GLuint;
 use crate::rendering::camera_2d::Camera2D;
 use crate::rendering::sprite::sprite_batch::SpriteBatch;
-use wrapped2d::b2::{BodyHandle, World, BodyType};
+use wrapped2d::b2::{BodyHandle, World, BodyType, MouseJointDef};
 use wrapped2d::user_data::NoUserData;
 use wrapped2d::b2;
 use nalgebra::{Vector4, Vector2};
@@ -25,6 +25,8 @@ use crate::rendering::sprite::rigid_body_2d::{RigidBody2D, ColliderType};
 use wrapped2d::common::math::Vec2;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 
+use wrapped2d::b2::{MouseJoint};
+
 pub struct Sprite {
     pub texture_id: GLuint,
     pub rigid_body_2d: RigidBody2D,
@@ -33,6 +35,26 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(
+        pos: Vector2<f32>,
+        body_type: &BodyType,
+        collider_type: ColliderType,
+        color: u2_u10_u10_u10_rev_float,
+        world: &mut World<NoUserData>,
+        texture: &Texture,
+    ) -> Sprite {
+        let rigid_body_2d = match collider_type {
+            ColliderType::Box(scale) => RigidBody2D::new_box_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, scale),
+            ColliderType::Circle(radius) => RigidBody2D::new_circle_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, radius)
+        };
+
+        Sprite {
+            texture_id: texture.id,
+            rigid_body_2d,
+            color,
+        }
+    }
+
+    pub fn new_mouse_joint(
         pos: Vector2<f32>,
         body_type: &BodyType,
         collider_type: ColliderType,

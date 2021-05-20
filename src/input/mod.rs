@@ -72,7 +72,6 @@ impl SdlInputManager {
                 //     self.viewport.use_viewport(&self.gl);
                 // }
                 Event::KeyDown { keycode: Some(key_code), repeat: false, .. } => {
-                    println!("KEY DOWN");
                     input.update_keyboard(key_code, true);
                     // self.key_map.insert(key_code, true);
                 },

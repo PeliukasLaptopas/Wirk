@@ -6,6 +6,7 @@ pub mod input;
 pub mod ecs;
 pub mod sound;
 pub mod tests;
+pub mod collision;
 
 #[macro_use] extern crate gl_derive;
 #[macro_use] extern crate failure;
@@ -79,6 +80,37 @@ use sdl2::audio::{AudioCVT, AudioCallback, AudioSpecDesired, AudioSpecWAV, Audio
 use std::borrow::Cow;
 use std::path::{PathBuf};
 use sdl2::{AudioSubsystem};
+use crate::collision::PointCollider2D;
+
+pub struct Sound {
+    data: Vec<u8>,
+    volume: f32,
+    pos: usize,
+}
+
+impl AudioCallback for Sound {
+    type Channel = u8;
+
+    fn callback(&mut self, out: &mut [u8]) {
+        for dst in out.iter_mut() {
+            // With channel type u8 the "silence" value is 128 (middle of the 0-2^8 range) so we need
+            // to both fill in the silence and scale the wav data accordingly. Filling the silence
+            // once the wav is finished is trivial, applying the volume is more tricky. We need to:
+            // * Change the range of the values from [0, 255] to [-128, 127] so we can multiply
+            // * Apply the volume by multiplying, this gives us range [-128*volume, 127*volume]
+            // * Move the resulting range to a range centered around the value 128, the final range
+            //   is [128 - 128*volume, 128 + 127*volume] – scaled and correctly positioned
+            //
+            // Using value 0 instead of 128 would result in clicking. Scaling by simply multiplying
+            // would not give correct results.
+            let pre_scale = *self.data.get(self.pos).unwrap_or(&128);
+            let scaled_signed_float = (pre_scale as f32 - 128.0) * self.volume;
+            let scaled = (scaled_signed_float + 128.0) as u8;
+            *dst = scaled;
+            self.pos += 1;
+        }
+    }
+}
 
 pub struct Engine<'a> {
     pub opened: bool,
@@ -95,11 +127,11 @@ pub struct Engine<'a> {
     pub ui_batch: SpriteBatch,
     pub program: Program,
     pub resources: Resources<'a>,
-    pub physics_world: World<NoUserData>,
+    // pub physics_world: World<NoUserData>,
 }
 
 impl<'a> Engine<'_> {
-    pub fn new(window_width: u32, window_height: u32, gravity: b2::Vec2, ecs: Ecs) -> Result<Engine<'a>, failure::Error> {
+    pub fn new(window_width: u32, window_height: u32, gravity: b2::Vec2, mut ecs: Ecs) -> Result<Engine<'a>, failure::Error> {
         let sdl = sdl2::init().map_err(err_msg)?;
         let video_subsystem = sdl.video().map_err(err_msg)?;
         let mut time_subsystem = sdl.timer().unwrap();
@@ -143,6 +175,9 @@ impl<'a> Engine<'_> {
 
         let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
 
+        ecs.resources.insert(world);
+        ecs.resources.insert(PointCollider2D::new());
+
         Ok(Engine {
             opened: true,
             input_manager,
@@ -158,7 +193,7 @@ impl<'a> Engine<'_> {
             ui_batch,
             program,
             resources,
-            physics_world: world
+            // physics_world: world
         })
     }
 
@@ -168,8 +203,9 @@ impl<'a> Engine<'_> {
                       collider_type: ColliderType,
                       color: u2_u10_u10_u10_rev_float,
                       texture: &Texture
-    ) -> Result<Sprite, failure::Error> {
-            Sprite::new(pos, body_type, collider_type, color, &mut self.physics_world, texture)
+    ) -> Sprite {
+        let mut physics_world = self.ecs.resources.get_mut::<World<NoUserData>>().unwrap(); //unsafe yes, but without this creating a new sprite would be a result - I don't want that. And also, currently physics is by default on
+        Sprite::new(pos, body_type, collider_type, color, &mut physics_world, texture)
     }
 
     pub fn new_text(&mut self,
@@ -191,8 +227,11 @@ impl<'a> Engine<'_> {
 
         self.sprite_batch.begin();
         for (sprite) in query.iter_mut(&mut self.ecs.world) {
-            let current_angle = self.physics_world.body_mut(sprite.rigid_body_2d.body).angle();
-            sprite.draw(&mut self.physics_world, &mut self.sprite_batch, current_angle);
+
+            for mut physics_world in self.ecs.resources.get_mut::<World<NoUserData>>() {
+                let current_angle = physics_world.body_mut(sprite.rigid_body_2d.body).angle();
+                sprite.draw(&mut physics_world, &mut self.sprite_batch, current_angle);
+            }
         }
 
         self.sprite_batch.end();
@@ -219,36 +258,107 @@ impl<'a> Engine<'_> {
         }
     }
 
-    // pub fn update_manager_resources(&mut self) {
-    //     let mut manager = self.ecs.resources.get_mut::<Manager>().unwrap();
-    //     for i in 0..(manager.entities_to_remove.len()) {
-    //         self.ecs.world.remove(manager.entities_to_remove[i]);
-    //         manager.entities_to_remove.remove(i);
-    //     }
-    // }
+    pub fn play_sound(&mut self, wav_file: &Cow<'static, Path>) -> Result<AudioDevice<Sound>, String> {
+        let audio_subsystem = self.sdl.audio()?;
+
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44_100),
+            channels: Some(1), // mono
+            samples: None,     // default
+        };
+
+        let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
+            let wav = AudioSpecWAV::load_wav(wav_file).expect("Could not load test WAV file");
+
+            let cvt = AudioCVT::new(
+                wav.format,
+                wav.channels,
+                wav.freq,
+                spec.format,
+                spec.channels,
+                spec.freq,
+            )
+                .expect("Could not convert WAV file");
+
+            let data = cvt.convert(wav.buffer().to_vec());
+
+            // initialize the audio callback
+            Sound {
+                data: data,
+                volume: 0.25,
+                pos: 0,
+            }
+        });
+
+        device
+    }
 
     pub fn update_input_resources(&mut self) {
         let mut input = self.ecs.resources.get_mut::<Input>().unwrap();
         self.input_manager.update(&mut input, &self.camera)
 
-            // .map(|mut input| self.input_manager.update(&mut input, &self.camera));
+        // .map(|mut input| self.input_manager.update(&mut input, &self.camera));
+    }
+
+    pub fn update_point_collider_2D_resources(&mut self) {
+        let mut point_collider_2d = self.ecs.resources.get_mut::<PointCollider2D>().unwrap();
+        let mut physics_world = self.ecs.resources.get_mut::<World<NoUserData>>().unwrap();
+
+        for input in self.ecs.resources.get_mut::<Input>() {
+            let p = b2::Vec2 { x: point_collider_2d.point.x, y: point_collider_2d.point.y };
+            let d = b2::Vec2 { x: 0.001, y: 0.001 };
+            let aabb = b2::AABB {
+                lower: p - d,
+                upper: p + d,
+            };
+
+            let mut result = None;
+            // let physics = self
+            {
+                let mut callback = |body_h: b2::BodyHandle, fixture_h: b2::FixtureHandle| {
+                    let body = physics_world.body(body_h);
+                    let fixture = body.fixture(fixture_h);
+
+                    if body.body_type() != b2::BodyType::Static && fixture.test_point(&p) {
+                        result = Some(body_h);
+                        false
+                    } else {
+                        true
+                    }
+                };
+                physics_world.query_aabb(&mut callback, &aabb);
+            }
+
+            point_collider_2d.body = result;
+        }
     }
 
     pub fn run(&mut self) {
         // self.ecs.world.push((, ));
 
+        // self.physics_world.set_contact_filter(Box::none());
+        // self.ecs.resources.insert(self.physics_world);
+        // self.ecs.resources.get_mut()
+
+
         while (self.input_manager.window_opened) {
-            self.physics_world.step(1.0 / 60.0, 6, 2);
+
+            for mut physics_world in self.ecs.resources.get_mut::<World<NoUserData>>() {
+                physics_world.step(1.0 / 60.0, 6, 2);
+            }
 
             unsafe {
                 self.gl.Enable(gl::BLEND);
                 self.gl.BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             }
 
+
             // self.input_manager.update();
-            // self.update_input();
+            self.update_input();
             self.update_input_resources();
             // self.update_manager_resources();
+
+            self.update_point_collider_2D_resources();
 
             self.ecs.run();
 

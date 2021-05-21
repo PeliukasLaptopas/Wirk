@@ -46,7 +46,7 @@ use rendering::vertex::*;
 
 use wrapped2d::b2;
 use wrapped2d::user_data::NoUserData;
-use wrapped2d::b2::{World, Vec2, BodyType};
+use wrapped2d::b2::{World, Vec2, BodyType, MetaBody, Body, BodyHandle};
 use wrapped2d::dynamics::body::BodyType::Static;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 use wrapped2d::dynamics::body::BodyType::Kinematic;
@@ -81,6 +81,8 @@ use std::borrow::Cow;
 use std::path::{PathBuf};
 use sdl2::{AudioSubsystem};
 use crate::collision::PointCollider2D;
+use std::cell::{RefMut, Ref};
+use wrapped2d::handle::TypedHandle;
 
 pub struct Sound {
     data: Vec<u8>,
@@ -326,10 +328,38 @@ impl<'a> Engine<'_> {
                         true
                     }
                 };
+
                 physics_world.query_aabb(&mut callback, &aabb);
             }
 
-            point_collider_2d.body = result;
+            // match result {
+            //     None => None,
+            //     Some(body_h) => {
+            //         point_collider_2d.body = Some(*physics_world.body_mut(body_h));
+            //         ()
+            //         // Some(*physics_world.body_mut(body_h))
+            //     }
+            // }
+
+            // result.map(|r| point_collider_2d.body = Some(*physics_world.body_mut(r)));
+
+            point_collider_2d.body_handle = result;
+
+            // point_collider_2d.callback.map(|c| c(*physics_world, point_collider_2d.body_handle));
+
+
+
+            // match &point_collider_2d.callback {
+            //     Some(coll) => {
+            //         match point_collider_2d.body_handle {
+            //             Some(bh) => {
+            //                 coll(*physics_world, bh);
+            //             }
+            //             None => ()
+            //         }
+            //     },
+            //     None => ()
+            // }
         }
     }
 
@@ -343,6 +373,8 @@ impl<'a> Engine<'_> {
 
         while (self.input_manager.window_opened) {
 
+
+
             for mut physics_world in self.ecs.resources.get_mut::<World<NoUserData>>() {
                 physics_world.step(1.0 / 60.0, 6, 2);
             }
@@ -351,7 +383,6 @@ impl<'a> Engine<'_> {
                 self.gl.Enable(gl::BLEND);
                 self.gl.BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             }
-
 
             // self.input_manager.update();
             self.update_input();

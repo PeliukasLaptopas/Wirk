@@ -11,6 +11,7 @@ edition = "2018"
 walkdir = "2.1"
 
 [dependencies]
+uuid = "0.8"
 failure = "0.1"
 gl = { path = "gl/" }
 gl_derive = { path = "gl_derive" }

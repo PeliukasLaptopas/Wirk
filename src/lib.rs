@@ -45,7 +45,7 @@ use crate::input::{SdlInputManager, Input};
 use rendering::vertex::*;
 
 use wrapped2d::b2;
-use wrapped2d::user_data::NoUserData;
+use wrapped2d::user_data::{NoUserData, UserDataTypes};
 use wrapped2d::b2::{World, Vec2, BodyType, MetaBody, Body, BodyHandle};
 use wrapped2d::dynamics::body::BodyType::Static;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
@@ -84,6 +84,8 @@ use crate::collision::PointCollider2D;
 use std::cell::{RefMut, Ref};
 use wrapped2d::handle::TypedHandle;
 
+use uuid::Uuid;
+
 pub struct Sound {
     data: Vec<u8>,
     volume: f32,
@@ -114,6 +116,13 @@ impl AudioCallback for Sound {
     }
 }
 
+pub struct CustomUserData;
+impl UserDataTypes for CustomUserData {
+    type BodyData = Option<Uuid>;
+    type JointData = ();
+    type FixtureData = ();
+}
+
 pub struct Engine<'a> {
     pub opened: bool,
     pub input_manager: SdlInputManager,
@@ -124,7 +133,6 @@ pub struct Engine<'a> {
     pub gl_context: GLContext, //if this isnt stored here it dies after create_window function and nothing will be drawn after the function is done
     pub gl: Rc<Gl>,
     pub ecs: Ecs,
-    pub camera: Camera2D,
     pub sprite_batch: SpriteBatch,
     pub ui_batch: SpriteBatch,
     pub program: Program,
@@ -133,7 +141,7 @@ pub struct Engine<'a> {
 }
 
 impl<'a> Engine<'_> {
-    pub fn new(window_width: u32, window_height: u32, gravity: b2::Vec2, mut ecs: Ecs) -> Result<Engine<'a>, failure::Error> {
+    pub fn new(window_width: u32, window_height: u32, camera_pos: Vector2<f32>, gravity: b2::Vec2, mut ecs: Ecs) -> Result<Engine<'a>, failure::Error> {
         let sdl = sdl2::init().map_err(err_msg)?;
         let video_subsystem = sdl.video().map_err(err_msg)?;
         let mut time_subsystem = sdl.timer().unwrap();
@@ -164,7 +172,6 @@ impl<'a> Engine<'_> {
 
         let mut input_manager = SdlInputManager::new(&sdl)?;
 
-        let mut camera_pos = Vector2::new(0.0, 0.0);
         let camera_scale = 32.0; //32 pixels per meter
         let mut camera = Camera2D::new(camera_pos, camera_scale, window_width, window_height);
 
@@ -175,10 +182,11 @@ impl<'a> Engine<'_> {
         let mut sprite_batch = SpriteBatch::new(&gl);
         let mut ui_batch = SpriteBatch::new(&gl);
 
-        let mut world: World<NoUserData> = b2::World::<NoUserData>::new(&gravity);
+        let mut world: World<CustomUserData> = b2::World::<CustomUserData>::new(&gravity);
 
         ecs.resources.insert(world);
         ecs.resources.insert(PointCollider2D::new());
+        ecs.resources.insert(camera);
 
         Ok(Engine {
             opened: true,
@@ -190,7 +198,6 @@ impl<'a> Engine<'_> {
             gl_context,
             gl,
             ecs,
-            camera,
             sprite_batch,
             ui_batch,
             program,
@@ -206,7 +213,7 @@ impl<'a> Engine<'_> {
                       color: u2_u10_u10_u10_rev_float,
                       texture: &Texture
     ) -> Sprite {
-        let mut physics_world = self.ecs.resources.get_mut::<World<NoUserData>>().unwrap(); //unsafe yes, but without this creating a new sprite would be a result - I don't want that. And also, currently physics is by default on
+        let mut physics_world = self.ecs.resources.get_mut::<World<CustomUserData>>().unwrap(); //unsafe yes, but without this creating a new sprite would be a result - I don't want that. And also, currently physics is by default on
         Sprite::new(pos, body_type, collider_type, color, &mut physics_world, texture)
     }
 
@@ -221,7 +228,9 @@ impl<'a> Engine<'_> {
     }
 
     pub fn update_camera(&mut self) {
-        self.camera.update();
+        for mut camera_2d in self.ecs.resources.get_mut::<Camera2D>() {
+            camera_2d.update();
+        }
     }
 
     pub fn render_sprites(&mut self) {
@@ -230,14 +239,17 @@ impl<'a> Engine<'_> {
         self.sprite_batch.begin();
         for (sprite) in query.iter_mut(&mut self.ecs.world) {
 
-            for mut physics_world in self.ecs.resources.get_mut::<World<NoUserData>>() {
+            for mut physics_world in self.ecs.resources.get_mut::<World<CustomUserData>>() {
                 let current_angle = physics_world.body_mut(sprite.rigid_body_2d.body).angle();
                 sprite.draw(&mut physics_world, &mut self.sprite_batch, current_angle);
             }
         }
 
         self.sprite_batch.end();
-        self.sprite_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
+
+        for mut camera_2d in self.ecs.resources.get_mut::<Camera2D>() {
+            self.sprite_batch.render_batch(&mut camera_2d, &mut self.program, &self.gl);
+        }
     }
 
     pub fn render_ui(&mut self) {
@@ -249,14 +261,21 @@ impl<'a> Engine<'_> {
         }
 
         self.ui_batch.end();
-        self.ui_batch.render_batch(&mut self.camera, &mut self.program, &self.gl);
+
+        for mut camera_2d in self.ecs.resources.get_mut::<Camera2D>() {
+            self.ui_batch.render_batch(&mut camera_2d, &mut self.program, &self.gl);
+
+        }
     }
 
     pub fn update_input(&mut self) {
         let mut query = <(&mut Input)>::query();
 
         for (input) in query.iter_mut(&mut self.ecs.world) {
-            self.input_manager.update(input, &self.camera);
+
+            for mut camera_2d in self.ecs.resources.get_mut::<Camera2D>() {
+                self.input_manager.update(input, &camera_2d);
+            }
         }
     }
 
@@ -297,14 +316,18 @@ impl<'a> Engine<'_> {
 
     pub fn update_input_resources(&mut self) {
         let mut input = self.ecs.resources.get_mut::<Input>().unwrap();
-        self.input_manager.update(&mut input, &self.camera)
+
+        for mut camera_2d in self.ecs.resources.get_mut::<Camera2D>() {
+            self.input_manager.update(&mut input, &camera_2d)
+
+        }
 
         // .map(|mut input| self.input_manager.update(&mut input, &self.camera));
     }
 
     pub fn update_point_collider_2D_resources(&mut self) {
         let mut point_collider_2d = self.ecs.resources.get_mut::<PointCollider2D>().unwrap();
-        let mut physics_world = self.ecs.resources.get_mut::<World<NoUserData>>().unwrap();
+        let mut physics_world = self.ecs.resources.get_mut::<World<CustomUserData>>().unwrap();
 
         for input in self.ecs.resources.get_mut::<Input>() {
             let p = b2::Vec2 { x: point_collider_2d.point.x, y: point_collider_2d.point.y };
@@ -332,34 +355,7 @@ impl<'a> Engine<'_> {
                 physics_world.query_aabb(&mut callback, &aabb);
             }
 
-            // match result {
-            //     None => None,
-            //     Some(body_h) => {
-            //         point_collider_2d.body = Some(*physics_world.body_mut(body_h));
-            //         ()
-            //         // Some(*physics_world.body_mut(body_h))
-            //     }
-            // }
-
-            // result.map(|r| point_collider_2d.body = Some(*physics_world.body_mut(r)));
-
             point_collider_2d.body_handle = result;
-
-            // point_collider_2d.callback.map(|c| c(*physics_world, point_collider_2d.body_handle));
-
-
-
-            // match &point_collider_2d.callback {
-            //     Some(coll) => {
-            //         match point_collider_2d.body_handle {
-            //             Some(bh) => {
-            //                 coll(*physics_world, bh);
-            //             }
-            //             None => ()
-            //         }
-            //     },
-            //     None => ()
-            // }
         }
     }
 
@@ -375,7 +371,7 @@ impl<'a> Engine<'_> {
 
 
 
-            for mut physics_world in self.ecs.resources.get_mut::<World<NoUserData>>() {
+            for mut physics_world in self.ecs.resources.get_mut::<World<CustomUserData>>() {
                 physics_world.step(1.0 / 60.0, 6, 2);
             }
 

@@ -49,7 +49,7 @@ impl Camera2D {
 
     pub fn update(&mut self) {
         if (self.needs_matrix_update) {
-            let translate = Vector3::new(-self.position.x, -self.position.y, 0.0);
+            let translate = Vector3::new(-self.position.x , -self.position.y , 0.0);
             self.camera_matrix = nalgebra_glm::translate(&self.ortho_matrix, &translate);
 
             let scale = Vector3::new(self.scale, self.scale, 0.0);
@@ -61,15 +61,17 @@ impl Camera2D {
 
     pub fn convert_screen_to_world(&self, screen_coords: Vector2<i32>) -> Vector2<f32> {
         //Make it so that 0 is at the center
-        let mut zero_at_center = Vector2::new(screen_coords.x as f32, self.screen_height as f32 - screen_coords.y as f32);
-        //Scale the coordinates
-        zero_at_center.x /= self.scale;
-        zero_at_center.y /= self.scale;
+        let mut zero_at_center: Vector2<f32> = Vector2::new(screen_coords.x as f32, (self.screen_height as f32 ) - screen_coords.y as f32  );
 
+        //Transalte with camera position
         zero_at_center.x += self.position.x;
         zero_at_center.y += self.position.y;
 
-        //Transalte with camera position
+        //Scale the coordinates
+        zero_at_center /= self.scale;
+
+        println!("Cam {} {}", self.position.x as f32, self.position.y as f32);
+
         zero_at_center
     }
 }

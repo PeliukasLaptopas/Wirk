@@ -232,5 +232,7 @@ impl SpriteBatch {
                 );
             }
         }
+
+        self.vao.unbind();
     }
 }

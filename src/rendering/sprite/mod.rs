@@ -26,11 +26,14 @@ use wrapped2d::common::math::Vec2;
 use wrapped2d::dynamics::body::BodyType::Dynamic;
 
 use wrapped2d::b2::{MouseJoint};
+use crate::CustomUserData;
+use uuid::Uuid;
 
 pub struct Sprite {
     pub texture_id: GLuint,
     pub rigid_body_2d: RigidBody2D,
     pub color: u2_u10_u10_u10_rev_float,
+    pub uuid: Uuid,
 }
 
 impl Sprite {
@@ -39,10 +42,10 @@ impl Sprite {
         body_type: &BodyType,
         collider_type: ColliderType,
         color: u2_u10_u10_u10_rev_float,
-        world: &mut World<NoUserData>,
+        world: &mut World<CustomUserData>,
         texture: &Texture,
     ) -> Sprite {
-        let rigid_body_2d = match collider_type {
+        let (rigid_body_2d, uuid) = match collider_type {
             ColliderType::Box(scale) => RigidBody2D::new_box_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, scale),
             ColliderType::Circle(radius) => RigidBody2D::new_circle_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, radius)
         };
@@ -51,34 +54,15 @@ impl Sprite {
             texture_id: texture.id,
             rigid_body_2d,
             color,
+            uuid
         }
     }
 
-    pub fn new_mouse_joint(
-        pos: Vector2<f32>,
-        body_type: &BodyType,
-        collider_type: ColliderType,
-        color: u2_u10_u10_u10_rev_float,
-        world: &mut World<NoUserData>,
-        texture: &Texture,
-    ) -> Result<Sprite, failure::Error> {
-        let rigid_body_2d = match collider_type {
-            ColliderType::Box(scale) => RigidBody2D::new_box_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, scale),
-            ColliderType::Circle(radius) => RigidBody2D::new_circle_body(world, body_type, Vec2 {x:pos.x, y:pos.y}, radius)
-        };
-
-        Ok(Sprite {
-            texture_id: texture.id,
-            rigid_body_2d,
-            color,
-        })
-    }
-
-    pub fn get_pos(&self, world: &World<NoUserData>) -> Vector2<f32> {
+    pub fn get_pos(&self, world: &World<CustomUserData>) -> Vector2<f32> {
         Vector2::new(world.body(self.rigid_body_2d.body).position().x, world.body(self.rigid_body_2d.body).position().y)
     }
 
-    pub fn draw(&self, world: &mut World<NoUserData>, sprite_batch: &mut SpriteBatch, angle: f32) {
+    pub fn draw(&self, world: &mut World<CustomUserData>, sprite_batch: &mut SpriteBatch, angle: f32) {
         let b2_body = world.body_mut(self.rigid_body_2d.body);
         let pos = Vector2::new(b2_body.position().x, b2_body.position().y);
 

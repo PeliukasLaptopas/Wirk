@@ -9,6 +9,7 @@ use crate::rendering::camera_2d::Camera2D;
 pub struct Input {
     key_map: HashMap<Keycode, bool>,
     once_key_map: HashMap<Keycode, bool>,
+    on_key_up_map: HashMap<Keycode, bool>,
     pub screen_mouse_position: Vector2<i32>,
     pub world_mouse_position: Vector2<f32>
 }
@@ -18,6 +19,7 @@ impl Input {
         Input {
             key_map: HashMap::new(),
             once_key_map: HashMap::new(),
+            on_key_up_map: HashMap::new(),
             screen_mouse_position: Vector2::new(0, 0),
             world_mouse_position: Vector2::new(0.0, 0.0)
         }
@@ -29,6 +31,10 @@ impl Input {
 
     pub fn update_keyboard_on_first_press(&mut self, key_code: Keycode, val: bool) {
         self.once_key_map.insert(key_code, val);
+    }
+
+    pub fn update_keyboard_on_up_press(&mut self, key_code: Keycode, val: bool) {
+        self.on_key_up_map.insert(key_code, val);
     }
 
     pub fn update_screen_mouse(&mut self, mouse_position: Vector2<i32>) {
@@ -51,6 +57,19 @@ impl Input {
         if self.once_key_map.contains_key(key_id) {
             if self.once_key_map[key_id] {
                 self.once_key_map.insert(*key_id, false);
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn on_key_up(&mut self, key_id: &Keycode) -> bool {
+        if self.on_key_up_map.contains_key(key_id) {
+            if self.on_key_up_map[key_id] {
+                self.on_key_up_map.insert(*key_id, false);
                 true
             } else {
                 false
@@ -91,11 +110,13 @@ impl SdlInputManager {
                 Event::KeyDown { keycode: Some(key_code), repeat: false, .. } => {
                     input.update_keyboard(key_code, true);
                     input.update_keyboard_on_first_press(key_code, true);
+                    input.update_keyboard_on_up_press(key_code, false);
                     // self.key_map.insert(key_code, true);
                 },
                 Event::KeyUp { keycode: Some(key_code), repeat: false, .. } => {
                     input.update_keyboard(key_code, false);
                     input.update_keyboard_on_first_press(key_code, false);
+                    input.update_keyboard_on_up_press(key_code, true);
                     // self.key_map.insert(key_code, false);
                 },
                 Event::MouseMotion { x, y, .. } => {

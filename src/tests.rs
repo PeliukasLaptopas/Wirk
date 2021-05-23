@@ -12,6 +12,7 @@ use crate::rendering::camera_2d::Camera2D;
 use crate::resources::Resources;
 use crate::rendering::shader::program::Program;
 use std::path::Path;
+use crate::CustomUserData;
 
 
 #[test]
@@ -43,7 +44,7 @@ fn test_add() {
 
     let mut sprite_batch = SpriteBatch::new(&gl);
 
-    let mut world = b2::World::<NoUserData>::new(&b2::Vec2{x:0.0, y:0.0});
+    let mut world = b2::World::<CustomUserData>::new(&b2::Vec2{x:0.0, y:0.0});
 
     let new_sprite = Sprite::new(Vector2::new(0.0, 0.0), &Static, ColliderType::Circle(1.0), (1.0, 1.0, 1.0, 1.0).into(), &mut world, &Texture{
         id: 0,

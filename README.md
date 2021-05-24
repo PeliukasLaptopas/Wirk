@@ -402,4 +402,489 @@ fn main() -> Result<(), failure::Error> {
 
 
 
+
+
+
+
+use RustEngineLibrary::*;
+use RustEngineLibrary::engine_error::failure_to_string;
+use wrapped2d::b2::{World, BodyHandle, JointHandle, MetaBody, WorldManifold, MAX_MANIFOLD_POINTS};
+use wrapped2d::b2::MouseJointDef;
+use wrapped2d::b2::MouseJoint;
+use wrapped2d::b2::Vec2;
+use wrapped2d::user_data::{NoUserData, UserData};
+use wrapped2d::b2;
+use wrapped2d::dynamics::body::BodyType::{Kinematic, Static};
+use wrapped2d::dynamics::body::BodyType::Dynamic;
+use std::path::Path;
+use crate::rendering::sprite::rigid_body_2d::ColliderType;
+use nalgebra::Vector2;
+use rendering::sprite::sprite_batch::*;
+use crate::rendering::sprite::Sprite;
+use crate::rendering::{vertex, sprite};
+use crate::resources::Resources;
+use crate::rendering::camera_2d::*;
+use crate::rendering::shader::program::Program;
+use legion::*;
+use crate::ecs::Ecs;
+use legion::systems::SystemFn;
+use rand::{thread_rng, Rng};
+use crate::rendering::ui::text::{Text};
+use sdl2::keyboard::Keycode;
+use crate::input::{Input};
+use crate::rendering::sprite::rigid_body_2d::{RigidBody2D};
+use std::num::NonZeroU64;
+use legion::systems::CommandBuffer;
+use legion::query::{Passthrough, ComponentFilter, And, EntityFilterTuple};
+use std::borrow::Cow;
+use wrapped2d::dynamics::joints::JointDef;
+use wrapped2d::wrap::FromFFI;
+use std::sync::{Arc, Mutex};
+use wrapped2d::dynamics::joints::mouse::ffi::{MouseJoint_as_joint, Joint_as_mouse_joint};
+use crate::collision::PointCollider2D;
+use std::cell::RefMut;
+use uuid::Uuid;
+use legion::world::SubWorld;
+use nalgebra_glm::sin;
+use gl::Gl;
+use std::rc::Rc;
+use wrapped2d::dynamics::contacts::ContactEdge;
+
+struct Time(i32);
+
+struct Gravity(Vec2);
+struct Sound;
+
+struct Player {
+}
+
+fn main() -> Result<(), failure::Error> {
+    #[system(simple)]
+    fn setup_environment(
+        commands: &mut CommandBuffer,
+        #[resource] resources: &mut Resources,
+        #[resource] physics_world: &mut World<CustomUserData>,
+        #[resource] gl: &mut Rc<Gl>,
+    ) {
+        let grass_texture = resources.get_texture("kenny\\Tiles\\tile_0018.png", &gl).unwrap();
+        let player_texture = resources.get_texture("kenny\\Characters\\character_0004.png", &gl).unwrap();
+        let circle_texture = resources.get_texture("circle.png", &gl).unwrap();
+
+        let mut player_sprite = Sprite::new(Vector2::new(15.0, 5.0), &Dynamic, ColliderType::Box(Vec2{x: 3.0, y: 3.0}), (1.0, 1.0, 1.0, 1.0).into(), physics_world, &player_texture, 0.0);
+        physics_world.body_mut(player_sprite.rigid_body_2d.body).set_rotation_fixed(true);
+        physics_world.body_mut(player_sprite.rigid_body_2d.body).fixture_mut(player_sprite.rigid_body_2d.fixture_handle).set_friction(0.2);
+        physics_world.body_mut(player_sprite.rigid_body_2d.body).fixture_mut(player_sprite.rigid_body_2d.fixture_handle).set_restitution(0.0);
+
+        commands.push((player_sprite, Player{}));
+
+        for x in -20..30 {
+            let pos = x * 2;
+
+            let grass_sprite = Sprite::new(Vector2::new(pos as f32, 1.0), &Static, ColliderType::Box(Vec2{x: 2.0, y: 2.0}), (1.0, 1.0, 1.0, 1.0).into(), physics_world, &grass_texture, 0.0);
+            commands.push((grass_sprite,));
+        }
+    }
+
+    #[system(for_each)]
+    fn player_movement(
+        #[resource] input: &mut Input,
+        #[resource] physics_world: &mut World<CustomUserData>,
+        sprite: &mut Sprite,
+        player: &Player
+    ) {
+        let move_speed = 50.0;
+        let jump_speed = 1500.0;
+
+        if (input.is_key_pressed(&Keycode::A)) {
+            physics_world.body_mut(sprite.rigid_body_2d.body).apply_force_to_center(&Vec2{x:-move_speed, y:0.0}, true);
+        }
+        if (input.is_key_pressed(&Keycode::D)) {
+            physics_world.body_mut(sprite.rigid_body_2d.body).apply_force_to_center(&Vec2{x: move_speed, y:0.0}, true);
+        }
+
+        let pos = Vector2::new(physics_world.body(sprite.rigid_body_2d.body).position().x, physics_world.body(sprite.rigid_body_2d.body).position().y);
+
+        let mut body = physics_world.body_mut(sprite.rigid_body_2d.body);
+
+        let mut bellow = false;
+        for (_, contact) in body.contacts() {
+            if (contact.is_touching()) {
+                let world_manifold = contact.world_manifold();
+
+                for i in 0..MAX_MANIFOLD_POINTS {
+                    if (world_manifold.points[i].y < pos.y - 3.0 / 2.0 + 0.01) {
+                        bellow = true;
+                    }
+                }
+            }
+        }
+
+        if (bellow) {
+            if (input.on_key_down(&Keycode::Space)) {
+                body.apply_force_to_center(&Vec2{x:0.0, y:jump_speed}, true);
+            }
+        }
+    }
+
+
+
+    #[system(simple)]
+    fn create_ball_logic(
+        commands: &mut CommandBuffer,
+        #[resource] input: &mut Input,
+        #[resource] physics_world: &mut World<CustomUserData>,
+        #[resource] gl: &mut Rc<Gl>,
+        #[resource] resources: &mut Resources,
+    ) {
+        let circle_texture = resources.get_texture("circle.png", &gl).unwrap();
+
+        if (input.is_key_pressed(&Keycode::G)) {
+            let mut rng = thread_rng();
+
+            let size = 0.0 + rng.gen_range(0.5..1.0) as f32;
+
+            let color_r = 0.0 + rng.gen_range(0.1..1.0) as f32;
+            let color_g = 0.0 + rng.gen_range(0.5..1.0) as f32;
+            let color_b = 0.0 + rng.gen_range(0.9..1.0) as f32;
+
+            let ball: Sprite = Sprite::new(
+                Vector2::new(input.world_mouse_position.x, input.world_mouse_position.y),
+                &Dynamic,
+                ColliderType::Circle(size),
+                (color_r, color_g, color_b, 1.0).into(),
+                physics_world,
+                &circle_texture,
+                0.0
+            );
+
+            commands.push((ball, ));
+        }
+    }
+
+
+
+    #[system(simple)]
+    #[read_component(usize)]
+    #[write_component(Sprite)]
+    #[write_component(bool)]
+    fn foo_deez(
+        commands: &mut CommandBuffer,
+        world: &mut SubWorld,
+        #[resource] camera: &mut Camera2D,
+        #[resource] grabbed: &mut Option<JointHandle>,
+        #[resource] grabbed_uuid: &mut Option<Uuid>,
+        #[resource] input: &mut Input,
+        #[resource] point_collider_2d: &mut PointCollider2D,
+        #[resource] physics_world: &mut World<CustomUserData>,
+        #[resource] time: &mut f32,
+    ) {
+        let dummy = physics_world.create_body(&b2::BodyDef::new());
+
+
+        point_collider_2d.point = Vec2 {
+            x: input.world_mouse_position.x,
+            y: input.world_mouse_position.y
+        };
+
+        let camera_speed = 2.0;
+        if (input.is_key_pressed(&Keycode::W)) {
+            camera.set_position(Vector2::new(camera.position.x, camera.position.y + camera_speed));
+        }
+        if (input.is_key_pressed(&Keycode::S)) {
+            camera.set_position(Vector2::new(camera.position.x, camera.position.y - camera_speed));
+        }
+        if (input.is_key_pressed(&Keycode::A)) {
+            camera.set_position(Vector2::new(camera.position.x - camera_speed, camera.position.y));
+        }
+        if (input.is_key_pressed(&Keycode::D)) {
+            camera.set_position(Vector2::new(camera.position.x + camera_speed, camera.position.y));
+        }
+
+        if (input.is_key_pressed(&Keycode::Z)) {
+            println!("SCALE {}", camera.scale);
+            camera.set_scale(camera.scale + 0.1);
+        }
+        if (input.is_key_pressed(&Keycode::X)) {
+            camera.set_scale(camera.scale - 0.1);
+        }
+
+        if !point_collider_2d.body_handle.is_none() {
+            if (input.on_key_down(&Keycode::E)) {
+                let mass;
+                let center;
+                {
+                    let mut body: RefMut<MetaBody<CustomUserData>> = physics_world.body_mut(point_collider_2d.body_handle.unwrap());
+                    mass = body.mass();
+                    center = *body.world_center();
+                    body.set_awake(true);
+
+                    let mut query = <(&mut Sprite)>::query();
+
+                    let uuid = body.user_data_mut();
+
+                    // this time we have &Velocity and &mut Position
+                    for (mut sprite) in query.iter_mut(world) {
+                        if sprite.uuid == uuid.unwrap() {
+                            *grabbed_uuid = Some(sprite.uuid);
+                        }
+                    }
+                }
+
+                let mut j_def = b2::MouseJointDef::new(dummy, point_collider_2d.body_handle.unwrap());
+                j_def.target = center;
+                j_def.max_force = 1000. * mass;
+
+                *grabbed = Some(physics_world.create_joint(&j_def));
+            }
+        } else {
+            // println!("NONE");
+        }
+
+        if (input.on_key_up(&Keycode::Space)) {
+            if let Some(j) = grabbed.take() {
+                physics_world.destroy_joint(j)
+            }
+            *grabbed = None;
+        }
+
+        if grabbed.is_some() {
+            let mut j = physics_world.joint_mut(grabbed.unwrap());
+
+            match **j {
+                b2::UnknownJoint::Mouse(ref mut j) => {
+                    *time += 0.05;
+
+                    let mut query = <(&mut Sprite)>::query();
+
+                    // this time we have &Velocity and &mut Position
+                    for (mut sprite) in query.iter_mut(world) {
+                        if sprite.uuid == grabbed_uuid.unwrap() {
+                            sprite.color = (1.0 * (time.cos() + 1.0) * 0.5, 1.0 * (time.sin() + 1.0) * 0.5, 0.07, 1.0).into();
+                        }
+                    }
+
+                    j.set_target(&Vec2{x: input.world_mouse_position.x, y:input.world_mouse_position.y});
+                }
+                _ => panic!("expected mouse joint"),
+            }
+        }
+    }
+
+    let body_handle: Option<JointHandle> = None;
+    let body_uuid: Option<Uuid> = None;
+
+    let mut ecs_resources = legion::Resources::default();
+    ecs_resources.insert(Input::new());
+    ecs_resources.insert(body_handle);
+    ecs_resources.insert(body_uuid);
+
+    let ecs_world = legion::World::default();
+
+
+    let mut startup_schedule = Schedule::builder()
+        .add_thread_local(setup_environment_system())
+        // .add_system(get_keys_system())
+        // .add_system(delete_half_sprites_logic())
+        .build();
+
+    let mut logic_schedule = Schedule::builder()
+        .add_thread_local(player_movement_system())
+        .add_thread_local(create_ball_logic_system())
+        // .add_system(get_keys_system())
+        // .add_system(delete_half_sprites_logic())
+        .build();
+
+
+    let ecs = Ecs {
+        schedule: logic_schedule,
+        startup_schedule: startup_schedule,
+        resources: ecs_resources,
+        world: ecs_world
+    };
+
+    let width  = 1600;
+    let height = 1200;
+    let gravity = Vec2 {x: 0.0, y: -9.9 };
+
+    let mut maybe_engine: Result<Engine, failure::Error> =
+        Engine::new(width,
+                    height,
+                    Vector2::new(0.0, 0.0),
+                    gravity,
+                    ecs);
+
+    match maybe_engine {
+        Ok(mut engine) => unsafe {
+            // let wall_texture = engine.resources.get_texture("water.png", &engine.gl)?;
+            // let character_texture = engine.resources.get_texture("character.png", &engine.gl)?;
+            // let water_texture = engine.resources.get_texture("water.png", &engine.gl)?;
+            //
+            // // let wav_file: Cow<'static, Path> = Cow::from(Path::new("./assets/laser.wav"));
+            // //
+            // // engine.play_sound(&wav_file).unwrap().resume();
+            // //
+            // // engine.resources.load_cstring("knyga.txt");
+            //
+            // //
+            // // let sprite_texture =
+            // //     engine.resources.get_texture("character.png",
+            // //                                 &engine.gl)?;
+            //
+            // let input = engine.ecs.resources.get_mut::<Input>()
+            //     .map(|input|
+            //              println!("x y {}", input.world_mouse_position.x)
+            //     );
+            //
+            // // let p = b2::Vec2 { x: 15.0, y: 15.0 };
+            // // let d = b2::Vec2 { x: 0.001, y: 0.001 };
+            // // let aabb = b2::AABB {
+            // //     lower: p - d,
+            // //     upper: p + d,
+            // // };
+            //
+            // let circle_texture = engine.resources.get_texture("circle.png", &engine.gl)?;
+            //
+            // let floor: Sprite = engine.new_sprite(
+            //     Vector2::new(15.0, -0.5),
+            //     &Kinematic,
+            //     ColliderType::Box(Vec2 { x: 50.0, y: 1.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &wall_texture
+            // );
+            //
+            // let right_wall: Sprite = engine.new_sprite(
+            //     Vector2::new(38.0, 0.0),
+            //     &Kinematic,
+            //     ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &wall_texture
+            // );
+            //
+            // let left_wall: Sprite = engine.new_sprite(
+            //     Vector2::new(-0.5, 0.0),
+            //     &Kinematic,
+            //     ColliderType::Box(Vec2 { x: 1.0, y: 100.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &wall_texture
+            // );
+            //
+            // let sprite: Sprite = engine.new_sprite(
+            //     Vector2::new(0.0, 0.0),
+            //     &Static,
+            //     ColliderType::Box(Vec2 { x: 1.0, y: 1.0 }),
+            //     (1.0, 0.0, 0.0, 1.0).into(),
+            //     &water_texture
+            // );
+            //
+            // let sprite69: Sprite = engine.new_sprite(
+            //     Vector2::new(0.0, 5.0),
+            //     &Static,
+            //     ColliderType::Box(Vec2 { x: 1.0, y: 1.0 }),
+            //     (1.0, 0.0, 0.0, 1.0).into(),
+            //     &water_texture
+            // );
+            //
+            // let sprite2: Sprite = engine.new_sprite(
+            //     Vector2::new(13.5, 21.0),
+            //     &Static,
+            //     ColliderType::Box(Vec2 { x: 3.0, y: 3.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &water_texture
+            // );
+            //
+            // let sprite3: Sprite = engine.new_sprite(
+            //     Vector2::new(10.5, 20.0),
+            //     &Static,
+            //     ColliderType::Box(Vec2 { x: 3.0, y: 3.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &water_texture
+            // );
+            //
+            // // engine.ecs.world.push((text, ));
+            //
+            // let character: Sprite = engine.new_sprite(
+            //     Vector2::new(20.0, 20.0),
+            //     &Dynamic,
+            //     ColliderType::Box(Vec2 { x: 0.8, y: 1.0 }),
+            //     (0.0, 1.0, 0.0, 1.0).into(),
+            //     &character_texture
+            // );
+            //
+            // let character1: Sprite = engine.new_sprite(
+            //     Vector2::new(20.0, 20.0),
+            //     &Dynamic,
+            //     ColliderType::Box(Vec2 { x: 1.6, y: 2.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &character_texture
+            // );
+            //
+            // let character2: Sprite = engine.new_sprite(
+            //     Vector2::new(20.0, 20.0),
+            //     &Dynamic,
+            //     ColliderType::Box(Vec2 { x: 1.6, y: 2.0 }),
+            //     (1.0, 1.0, 1.0, 1.0).into(),
+            //     &character_texture
+            // );
+            //
+            // // let mouse_joint_definition = b2::MouseJointDef::new(floor.rigid_body_2d.body, character.rigid_body_2d.body);
+            //
+            // // let joint = mouse_joint_definition.create(&mut engine.physics_world);
+            // // let mouse_joint: MouseJoint = MouseJoint::from_ffi(joint);
+            //
+            //
+            //
+            //
+            // // let mouse_j: *mut MouseJoint = Joint_as_mouse_joint(mouse_joint);
+            //
+            // // mouse_joint.set_target(&Vec2{x:10.0, y:10.0});
+            //
+            // // engine.physics_world.create_joint(mouse_joint_definition);
+            //
+            //
+            // engine.ecs.world.push((tits, ));
+            //
+            // engine.ecs.world.push((floor, ));
+            // engine.ecs.world.push((left_wall, ));
+            // engine.ecs.world.push((right_wall, ));
+            //
+            // engine.ecs.world.push((sprite69, ));
+            // engine.ecs.world.push((sprite, ));
+            // engine.ecs.world.push((sprite2, ));
+            // engine.ecs.world.push((sprite3, ));
+            //
+            // engine.ecs.world.push((character, Player{}));
+            // engine.ecs.world.push((character1,));
+            // engine.ecs.world.push((character2,));
+            //
+            // let mut rng = thread_rng();
+            //
+            // for i in 0..500 {
+            //     let x = 0.0 + rng.gen_range(10.0..25.0) as f32;
+            //     let y = 10.0 + rng.gen_range(0.0..250.0) as f32;
+            //     let size = 0.0 + rng.gen_range(0.5..1.0) as f32;
+            //
+            //     let color_r = 0.0 + rng.gen_range(0.9..1.0) as f32;
+            //     let color_g = 0.0 + rng.gen_range(0.5..1.0) as f32;
+            //     let color_b = 0.0 + rng.gen_range(0.9..1.0) as f32;
+            //
+            //     let sprite: Sprite = engine.new_sprite(
+            //         Vector2::new(x, y),
+            //         &Dynamic,
+            //         ColliderType::Circle(size),
+            //         (color_r, color_g, color_b, 1.0).into(),
+            //         &circle_texture
+            //     );
+            //
+            //     engine.ecs.world.push((sprite,));
+            // }
+
+            engine.run()
+        },
+        Err(e) => println!("{}", failure_to_string(e))
+    }
+
+    Ok(())
+}
+
+
 ```

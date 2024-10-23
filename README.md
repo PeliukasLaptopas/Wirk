@@ -1,3 +1,42 @@
+Video game engine written in Rust. Supports 2d physics (Box2D engine) and sprite batching.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 I have downloaded SDL2 (SDL2-devel-2.0.14-VC.zip) from https://www.libsdl.org/download-2.0.php and added /x64/* files to C:\Users\*\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib\ in order for SDL to work
 
 Machine needs visual c++ installed. Just simply download visual studio 2019 or you will get this error while compiling:
